@@ -1,11 +1,5 @@
 {
-  "functions": {
-    "api/forecast.py": {
-      "runtime": "vercel-python@4.3.0"
-    }
-  },
   "rewrites": [
-    { "source": "/api/forecast", "destination": "/api/forecast.py" },
     { "source": "/(.*)", "destination": "/public/index.html" }
   ]
 }
