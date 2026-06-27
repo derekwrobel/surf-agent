@@ -1,5 +1,6 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/public/index.html" }
+  "routes": [
+    { "src": "/api/forecast", "dest": "/api/index.py" },
+    { "src": "/(.*)", "dest": "/public/index.html" }
   ]
 }
