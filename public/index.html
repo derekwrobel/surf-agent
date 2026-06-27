@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Surf Agent">
+<title>SD Surf Agent</title>
+<style>
+  :root {
+    --green: #1D9E75;
+    --green-light: #E1F5EE;
+    --green-dark: #0F6E56;
+    --text: #1a1a1a;
+    --text-secondary: #6b7280;
+    --border: rgba(0,0,0,0.1);
+    --bg: #f9f9f8;
+    --card: #ffffff;
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text: #f0f0ee;
+      --text-secondary: #9ca3af;
+      --border: rgba(255,255,255,0.1);
+      --bg: #111110;
+      --card: #1c1c1a;
+      --green-light: #0a2e22;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header { padding: 52px 20px 16px; background: var(--card); border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  header h1 span.wave { font-size: 22px; }
+  header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+  .content { padding: 16px 16px 100px; max-width: 600px; margin: 0 auto; }
+
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin: 20px 0 8px; }
+  .section-label:first-of-type { margin-top: 8px; }
+
+  .zone-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; margin: 14px 0 6px; padding-left: 2px; }
+
+  .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .spot-chip { padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); cursor: pointer; user-select: none; transition: all 0.15s; }
+  .spot-chip.selected { border: 1.5px solid var(--green); background: var(--green-light); }
+  .spot-chip-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .spot-chip.selected .spot-chip-name { color: var(--green-dark); }
+  .spot-chip-note { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .spot-chip.selected .spot-chip-note { color: var(--green); }
+
+  .quick-btns { display: flex; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+  .quick-btn { font-size: 12px; padding: 6px 12px; border: 0.5px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text-secondary); cursor: pointer; }
+  .quick-btn:active { opacity: 0.7; }
+
+  .day-selector { display: flex; gap: 8px; }
+  .day-btn { flex: 1; padding: 10px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font-size: 14px; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .day-btn.selected { border: 1.5px solid var(--green); background: var(--green-light); color: var(--green-dark); font-weight: 500; }
+
+  .go-btn { width: 100%; padding: 16px; background: var(--green); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: opacity 0.15s; }
+  .go-btn:active { opacity: 0.85; }
+  .go-btn:disabled { opacity: 0.4; }
+
+  .result-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 20px; }
+  .result-text { font-size: 14px; line-height: 1.75; white-space: pre-wrap; color: var(--text); }
+  .result-text .stars { color: #f59e0b; }
+
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -3px; margin-right: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1s infinite; flex-shrink: 0; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .count-pill { font-size: 11px; padding: 2px 8px; background: var(--green-light); color: var(--green-dark); border-radius: 20px; margin-left: 6px; font-weight: 500; }
+
+  .error { color: #dc2626; font-size: 13px; margin-top: 12px; padding: 12px; background: #fef2f2; border-radius: 10px; }
+  @media (prefers-color-scheme: dark) { .error { background: #2a1010; color: #f87171; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="wave">🌊</span> SD Surf Agent</h1>
+  <p>Dawn patrol forecast powered by Open-Meteo + Claude</p>
+</header>
+
+<div class="content">
+  <div style="display:flex;align-items:center;">
+    <div class="section-label" style="margin:8px 0 8px;">Spots</div>
+    <span class="count-pill" id="count-pill">4 selected</span>
+  </div>
+
+  <div class="quick-btns">
+    <button class="quick-btn" onclick="selectAll()">All</button>
+    <button class="quick-btn" onclick="clearAll()">None</button>
+    <button class="quick-btn" onclick="selectDefaults()">Defaults</button>
+  </div>
+
+  <div id="spot-sections"></div>
+
+  <div class="section-label">When</div>
+  <div class="day-selector" id="day-selector">
+    <button class="day-btn selected" data-days="1" onclick="selectDay(this)">Tomorrow</button>
+    <button class="day-btn" data-days="2" onclick="selectDay(this)">In 2 days</button>
+    <button class="day-btn" data-days="3" onclick="selectDay(this)">In 3 days</button>
+  </div>
+
+  <button class="go-btn" id="go-btn" onclick="getForecast()">Get forecast</button>
+
+  <div id="status-row" style="display:none;" class="status-row">
+    <div class="dot"></div>
+    <span id="status-text">Fetching wave data…</span>
+  </div>
+
+  <div id="error" style="display:none;" class="error"></div>
+
+  <div id="result-card" style="display:none;" class="result-card">
+    <div class="result-text" id="result-text"></div>
+  </div>
+</div>
+
+<script>
+const ZONES = [
+  { label: "OB / Point Loma", spots: [
+    { key: "sunset_cliffs", name: "Sunset Cliffs",    note: "Reef · W/SW swell" },
+    { key: "ob_pier",       name: "OB Pier",          note: "Home base" },
+    { key: "avalanche",     name: "Avalanche",        note: "SW/W swell 197–307°" },
+  ]},
+  { label: "Mission / PB", spots: [
+    { key: "mission",  name: "Mission Beach", note: "Beach break" },
+    { key: "pb_dr",    name: "PB Dr.",        note: "Beach break" },
+    { key: "crystal",  name: "Crystal Pier",  note: "PB pier break" },
+    { key: "tourm",    name: "Tourmaline",    note: "Longboard friendly" },
+  ]},
+  { label: "La Jolla", spots: [
+    { key: "lj_shores", name: "La Jolla Shores", note: "Protected south wind" },
+    { key: "blacks",    name: "Blacks Beach",    note: "Uncrowded · hike in" },
+    { key: "scripps",   name: "Scripps Pier",    note: "N La Jolla" },
+  ]},
+  { label: "Del Mar", spots: [
+    { key: "delmar_15",    name: "Del Mar 15th St",    note: "Town beach break" },
+    { key: "delmar_river", name: "Del Mar Rivermouth", note: "Shifting sandbars" },
+    { key: "delmar_29",    name: "Del Mar 29th St",    note: "N Del Mar peaks" },
+  ]},
+  { label: "Encinitas", spots: [
+    { key: "cardiff",   name: "Cardiff",   note: "Reef · long rides" },
+    { key: "swamis",    name: "Swami's",   note: "Reef · best W swell" },
+    { key: "grandview", name: "Grandview", note: "Reef · consistent" },
+  ]},
+];
+
+const DEFAULT_KEYS = new Set(["ob_pier","avalanche","tourm","lj_shores"]);
+const selected = new Set(DEFAULT_KEYS);
+let daysAhead = 1;
+
+function renderSpots() {
+  const container = document.getElementById("spot-sections");
+  container.innerHTML = "";
+  ZONES.forEach(zone => {
+    const zl = document.createElement("div");
+    zl.className = "zone-label";
+    zl.textContent = zone.label;
+    container.appendChild(zl);
+    const grid = document.createElement("div");
+    grid.className = "spot-grid";
+    zone.spots.forEach(s => {
+      const el = document.createElement("div");
+      el.className = "spot-chip" + (selected.has(s.key) ? " selected" : "");
+      el.id = "chip-" + s.key;
+      el.innerHTML = `<div class="spot-chip-name">${s.name}</div><div class="spot-chip-note">${s.note}</div>`;
+      el.onclick = () => {
+        selected.has(s.key) ? selected.delete(s.key) : selected.add(s.key);
+        el.classList.toggle("selected", selected.has(s.key));
+        updateCount();
+      };
+      grid.appendChild(el);
+    });
+    container.appendChild(grid);
+  });
+}
+
+function updateCount() {
+  document.getElementById("count-pill").textContent = selected.size + " selected";
+}
+function selectAll() {
+  ZONES.forEach(z => z.spots.forEach(s => { selected.add(s.key); document.getElementById("chip-"+s.key)?.classList.add("selected"); }));
+  updateCount();
+}
+function clearAll() {
+  selected.clear();
+  document.querySelectorAll(".spot-chip").forEach(el => el.classList.remove("selected"));
+  updateCount();
+}
+function selectDefaults() {
+  selected.clear();
+  document.querySelectorAll(".spot-chip").forEach(el => el.classList.remove("selected"));
+  DEFAULT_KEYS.forEach(k => { selected.add(k); document.getElementById("chip-"+k)?.classList.add("selected"); });
+  updateCount();
+}
+function selectDay(btn) {
+  document.querySelectorAll(".day-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  daysAhead = parseInt(btn.dataset.days);
+}
+
+function setLoading(loading, statusText) {
+  const btn = document.getElementById("go-btn");
+  const row = document.getElementById("status-row");
+  if (loading) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Fetching forecast…';
+    row.style.display = "flex";
+    document.getElementById("status-text").textContent = statusText || "Fetching wave data…";
+    document.getElementById("error").style.display = "none";
+    document.getElementById("result-card").style.display = "none";
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Get forecast";
+    row.style.display = "none";
+  }
+}
+
+function formatResult(text) {
+  return text
+    .replace(/★/g, '<span class="stars">★</span>')
+    .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
+}
+
+async function getForecast() {
+  if (selected.size === 0) {
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error").textContent = "Select at least one spot.";
+    return;
+  }
+
+  setLoading(true, "Fetching wave data for " + selected.size + " spots…");
+
+  try {
+    const res = await fetch("/api/forecast", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ spots: [...selected], days_ahead: daysAhead })
+    });
+
+    document.getElementById("status-text").textContent = "Claude is analyzing conditions…";
+
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Server error");
+
+    setLoading(false);
+    const card = document.getElementById("result-card");
+    document.getElementById("result-text").innerHTML = formatResult(data.result);
+    card.style.display = "block";
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch(e) {
+    setLoading(false);
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error").textContent = "Error: " + e.message;
+  }
+}
+
+renderSpots();
+</script>
+</body>
+</html>
