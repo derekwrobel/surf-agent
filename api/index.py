@@ -1,26 +1,29 @@
+from flask import Flask, request, jsonify
 import json
 import os
 import urllib.request
 import urllib.parse
 from datetime import datetime, timedelta
 
+app = Flask(__name__)
+
 SPOTS = [
-    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef · W/SW swell"},
+    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
     {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
-    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7510, "lng": -117.2560, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307°"},
+    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7510, "lng": -117.2560, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
     {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "crystal",        "name": "Crystal Pier",         "lat": 32.7882, "lng": -117.2527, "zone": "Mission / PB",     "note": "PB pier break"},
     {"key": "tourm",          "name": "Tourmaline",           "lat": 32.7972, "lng": -117.2597, "zone": "Mission / PB",     "note": "Longboard friendly"},
     {"key": "lj_shores",      "name": "La Jolla Shores",      "lat": 32.8572, "lng": -117.2567, "zone": "La Jolla",         "note": "Protected south wind"},
-    {"key": "blacks",         "name": "Blacks Beach",         "lat": 32.8789, "lng": -117.2519, "zone": "La Jolla",         "note": "Uncrowded · hike in"},
+    {"key": "blacks",         "name": "Blacks Beach",         "lat": 32.8789, "lng": -117.2519, "zone": "La Jolla",         "note": "Uncrowded - hike in"},
     {"key": "scripps",        "name": "Scripps Pier",         "lat": 32.8664, "lng": -117.2541, "zone": "La Jolla",         "note": "N La Jolla"},
     {"key": "delmar_15",      "name": "Del Mar 15th St",      "lat": 32.9561, "lng": -117.2719, "zone": "Del Mar",          "note": "Town beach break"},
     {"key": "delmar_river",   "name": "Del Mar Rivermouth",   "lat": 32.9609, "lng": -117.2739, "zone": "Del Mar",          "note": "Shifting sandbars"},
     {"key": "delmar_29",      "name": "Del Mar 29th St",      "lat": 32.9680, "lng": -117.2724, "zone": "Del Mar",          "note": "N Del Mar peaks"},
-    {"key": "cardiff",        "name": "Cardiff",              "lat": 33.0136, "lng": -117.2820, "zone": "Encinitas",        "note": "Reef · long rides"},
-    {"key": "swamis",         "name": "Swami's",              "lat": 33.0367, "lng": -117.2921, "zone": "Encinitas",        "note": "Reef · best W swell"},
-    {"key": "grandview",      "name": "Grandview",            "lat": 33.0574, "lng": -117.2940, "zone": "Encinitas",        "note": "Reef · consistent"},
+    {"key": "cardiff",        "name": "Cardiff",              "lat": 33.0136, "lng": -117.2820, "zone": "Encinitas",        "note": "Reef - long rides"},
+    {"key": "swamis",         "name": "Swami's",              "lat": 33.0367, "lng": -117.2921, "zone": "Encinitas",        "note": "Reef - best W swell"},
+    {"key": "grandview",      "name": "Grandview",            "lat": 33.0574, "lng": -117.2940, "zone": "Encinitas",        "note": "Reef - consistent"},
 ]
 SPOT_BY_KEY = {s["key"]: s for s in SPOTS}
 
@@ -59,21 +62,21 @@ Never say stay home - always rank and recommend.
 Output format:
 
 DAWN PATROL - [Day, Month Date]
-Conditions: [1-sentence cross-referenced swell/wind summary - note if buoy confirms or contradicts model]
+Conditions: [1-sentence cross-referenced swell/wind summary]
 
 RANKED SPOTS
-1. [Spot name] [stars 1-5]  [height ft] | [period]s | [swell dir] degrees | wind [speed]mph [dir] degrees | tide [ft]
-   [One sentence: why it's number 1 today]
+1. [Spot name] [1-5 stars]  [height ft] | [period]s | [swell dir]deg | wind [speed]mph [dir]deg | tide [ft]
+   [One sentence: why it's #1 today]
 2. [Spot name] ...
    [One sentence]
-... (all checked spots, best to worst)
+(all checked spots, best to worst)
 
 SKIP (flat or blown out):
 - [Spot name]: [one-word reason]
 
-Notes: [Tide warnings, crowd notes, buoy vs model discrepancies, anything worth flagging. 2-3 sentences max.]
+Notes: [Tide warnings, crowd notes, buoy vs model discrepancies. 2-3 sentences max.]
 
-Use star ratings 1-5: 5=pumping, 4=good, 3=decent, 2=marginal, 1=barely surfable.
+Star ratings: 5=pumping, 4=good, 3=decent, 2=marginal, 1=barely surfable.
 Convert wave height to feet (1m = 3.28ft). Be direct and specific."""
 
 
@@ -246,70 +249,55 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date):
         return json.loads(r.read())["content"][0]["text"]
 
 
-def handler(request):
-    method = request.method
+@app.route("/api/forecast", methods=["GET", "OPTIONS"])
+def get_spots():
+    if request.method == "OPTIONS":
+        return _cors(jsonify({}))
+    return _cors(jsonify({"spots": SPOTS}))
 
-    cors_headers = {
-        "Access-Control-Allow-Origin":  "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Content-Type": "application/json",
-    }
 
-    if method == "OPTIONS":
-        return Response("", headers=cors_headers, status=200)
+@app.route("/api/forecast", methods=["POST"])
+def get_forecast():
+    try:
+        body       = request.get_json(force=True) or {}
+        keys       = body.get("spots", [s["key"] for s in SPOTS])
+        days_ahead = int(body.get("days_ahead", 1))
+        target     = datetime.now() + timedelta(days=days_ahead)
+        spots      = [SPOT_BY_KEY[k] for k in keys if k in SPOT_BY_KEY]
 
-    if method == "GET":
-        return Response(
-            json.dumps({"spots": SPOTS}),
-            headers=cors_headers,
-            status=200
-        )
+        if not spots:
+            return _cors(jsonify({"error": "No valid spots"})), 400
 
-    if method == "POST":
+        openmeteo_parts = []
+        for spot in spots:
+            try:
+                openmeteo_parts.append(fetch_openmeteo(spot, target))
+            except Exception as e:
+                openmeteo_parts.append(f"{spot['name']}: error - {e}")
+
         try:
-            body       = request.json() if callable(request.json) else json.loads(request.body)
-            keys       = body.get("spots", [s["key"] for s in SPOTS])
-            days_ahead = int(body.get("days_ahead", 1))
-            target     = datetime.now() + timedelta(days=days_ahead)
-            spots      = [SPOT_BY_KEY[k] for k in keys if k in SPOT_BY_KEY]
-
-            if not spots:
-                return Response(
-                    json.dumps({"error": "No valid spots"}),
-                    headers=cors_headers, status=400
-                )
-
-            openmeteo_parts = []
-            for spot in spots:
-                try:
-                    openmeteo_parts.append(fetch_openmeteo(spot, target))
-                except Exception as e:
-                    openmeteo_parts.append(f"{spot['name']}: error - {e}")
-
-            try:
-                buoy_block = fetch_buoys()
-            except Exception as e:
-                buoy_block = f"Buoy data unavailable: {e}"
-
-            try:
-                tide_block = fetch_tides(target)
-            except Exception as e:
-                tide_block = f"Tide data unavailable: {e}"
-
-            result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target)
-            return Response(
-                json.dumps({"result": result}),
-                headers=cors_headers, status=200
-            )
-
+            buoy_block = fetch_buoys()
         except Exception as e:
-            return Response(
-                json.dumps({"error": str(e)}),
-                headers=cors_headers, status=500
-            )
+            buoy_block = f"Buoy data unavailable: {e}"
 
-    return Response(
-        json.dumps({"error": "Method not allowed"}),
-        headers=cors_headers, status=405
-    )
+        try:
+            tide_block = fetch_tides(target)
+        except Exception as e:
+            tide_block = f"Tide data unavailable: {e}"
+
+        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target)
+        return _cors(jsonify({"result": result}))
+
+    except Exception as e:
+        return _cors(jsonify({"error": str(e)})), 500
+
+
+def _cors(response):
+    response.headers["Access-Control-Allow-Origin"]  = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
