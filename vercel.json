@@ -1,6 +1,11 @@
 {
+  "functions": {
+    "api/forecast.py": {
+      "runtime": "python3.9"
+    }
+  },
   "rewrites": [
-    { "source": "/api/forecast", "destination": "/api/forecast" },
+    { "source": "/api/forecast", "destination": "/api/forecast.py" },
     { "source": "/(.*)", "destination": "/public/index.html" }
   ]
 }
