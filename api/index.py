@@ -12,7 +12,7 @@ app = Flask(__name__)
 SPOTS = [
     {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
     {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
-    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
+    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "Beach break · SW/W swell 197-307deg"},
     {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma", "note": "N jetty · hollow peaks"},
     {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break"},
@@ -49,7 +49,8 @@ When buoy data and model data differ, weight the buoy more heavily for current c
 LOCAL KNOWLEDGE:
 - South wind (160-200 degrees) -> La Jolla Shores is protected; OB/PB beach breaks get choppy
 - Extreme low tide (<= -1.2 ft) -> skip Avalanche south side, use OB pier north sandbar peaks
-- Avalanche optimal swell: 197-307 degrees (SSW/SW/W) - north/NW swell misses it
+- Avalanche: beach break (NOT a reef), optimal swell 197-307 degrees (SSW/SW/W) - north/NW swell misses it
+- OB Pier, Mission Beach, PB Dr., Crystal Pier, Tourmaline, La Jolla Shores, Blacks, Del Mar spots: all beach breaks
 - Sunset Cliffs: reef, needs solid W/SW groundswell, very tide-sensitive
 - Blacks Beach: exposed to all swells, uncrowded, hike down required
 - Del Mar Rivermouth: best with S/SW swell, shifting sandbars

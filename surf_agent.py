@@ -32,7 +32,7 @@ ZONES = {
     "OB / Point Loma": [
         {"key": "sunset_cliffs", "name": "Sunset Cliffs",    "lat": 32.7215, "lng": -117.2568, "note": "Reef · W/SW swell"},
         {"key": "ob_pier",       "name": "OB Pier",          "lat": 32.7528, "lng": -117.2553, "note": "Home base"},
-        {"key": "avalanche",     "name": "Avalanche",        "lat": 32.7510, "lng": -117.2560, "note": "SW/W swell 197-307°"},
+        {"key": "avalanche",     "name": "Avalanche",        "lat": 32.7510, "lng": -117.2560, "note": "Beach break · SW/W swell 197-307°"},
     ],
     "Mission / PB": [
         {"key": "mission",  "name": "Mission Beach", "lat": 32.7662, "lng": -117.2525, "note": "Beach break"},
@@ -278,7 +278,8 @@ When buoy data and model data differ, weight the buoy more heavily for current c
 LOCAL KNOWLEDGE:
 - South wind (160–200°) → La Jolla Shores is protected; OB/PB beach breaks get choppy
 - Extreme low tide (≤ −1.2 ft) → skip Avalanche south side, use OB pier north sandbar peaks
-- Avalanche optimal swell: 197–307° (SSW/SW/W) — north/NW swell misses it
+- Avalanche: beach break (NOT a reef), optimal swell 197–307° (SSW/SW/W) — north/NW swell misses it
+- OB Pier, Mission Beach, PB Dr., Crystal Pier, Tourmaline, La Jolla Shores, Blacks, Del Mar spots: all beach breaks
 - Sunset Cliffs: reef, needs solid W/SW groundswell, very tide-sensitive, sharky at dawn
 - Blacks Beach: exposed to all swells, uncrowded, hike down required
 - Del Mar Rivermouth: best with S/SW swell, shifting sandbars
