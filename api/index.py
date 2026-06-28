@@ -12,7 +12,8 @@ app = Flask(__name__)
 SPOTS = [
     {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
     {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
-    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7510, "lng": -117.2560, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
+    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
+    {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma", "note": "N jetty · hollow peaks"},
     {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "crystal",        "name": "Crystal Pier",         "lat": 32.7882, "lng": -117.2527, "zone": "Mission / PB",     "note": "PB pier break"},
@@ -221,7 +222,7 @@ def fetch_tides(target_date):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names):
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date):
     api_key    = os.environ.get("ANTHROPIC_API_KEY", "")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
     payload = json.dumps({
@@ -231,7 +232,7 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
         "messages": [{
             "role": "user",
             "content": (
-                f"Rank ONLY these spots for dawn patrol on {date_label}: {spot_names}. Do not include any other spots.\n\n"
+                f"Rank all checked spots for dawn patrol on {date_label}.\n\n"
                 f"SOURCE 1 - Open-Meteo forecast (model):\n{openmeteo_block}\n\n"
                 f"SOURCE 2 - NOAA Buoy readings (measured):\n{buoy_block}\n\n"
                 f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
@@ -287,8 +288,7 @@ def get_forecast():
         except Exception as e:
             tide_block = f"Tide data unavailable: {e}"
 
-        spot_names = ", ".join(s["name"] for s in spots)
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names)
+        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target)
         return _cors(jsonify({"result": result}))
 
     except Exception as e:
