@@ -12,7 +12,7 @@ app = Flask(__name__)
 SPOTS = [
     {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
     {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
-    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "Beach break · SW/W swell 197-307deg"},
+    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
     {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma", "note": "N jetty · hollow peaks"},
     {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break"},
@@ -49,8 +49,7 @@ When buoy data and model data differ, weight the buoy more heavily for current c
 LOCAL KNOWLEDGE:
 - South wind (160-200 degrees) -> La Jolla Shores is protected; OB/PB beach breaks get choppy
 - Extreme low tide (<= -1.2 ft) -> skip Avalanche south side, use OB pier north sandbar peaks
-- Avalanche: beach break (NOT a reef), optimal swell 197-307 degrees (SSW/SW/W) - north/NW swell misses it
-- OB Pier, Mission Beach, PB Dr., Crystal Pier, Tourmaline, La Jolla Shores, Blacks, Del Mar spots: all beach breaks
+- Avalanche optimal swell: 197-307 degrees (SSW/SW/W) - north/NW swell misses it
 - Sunset Cliffs: reef, needs solid W/SW groundswell, very tide-sensitive
 - Blacks Beach: exposed to all swells, uncrowded, hike down required
 - Del Mar Rivermouth: best with S/SW swell, shifting sandbars
@@ -90,7 +89,7 @@ def fetch_url(url, timeout=10):
         return r.read().decode("utf-8")
 
 
-def fetch_openmeteo(spot, target_date):
+def fetch_openmeteo(spot, target_date, hour_range=None):
     params = urllib.parse.urlencode({
         "latitude": spot["lat"],
         "longitude": spot["lng"],
@@ -107,22 +106,26 @@ def fetch_openmeteo(spot, target_date):
         if not t.startswith(date_str):
             continue
         hour = int(t[11:13])
-        if 5 <= hour <= 8:
-            wh  = hourly["wave_height"][i]         or 0
-            wp  = hourly["wave_period"][i]          or 0
-            wd  = hourly["wave_direction"][i]       or 0
-            swh = hourly["swell_wave_height"][i]    or 0
-            swp = hourly["swell_wave_period"][i]    or 0
-            swd = hourly["swell_wave_direction"][i] or 0
-            ws  = hourly["wind_speed_10m"][i]       or 0
-            wdr = hourly["wind_direction_10m"][i]   or 0
-            lines.append(
-                f"  {t[11:16]}: wave {wh:.1f}m/{wp:.0f}s/{wd:.0f}deg | "
-                f"swell {swh:.1f}m {swp:.0f}s from {swd:.0f}deg | "
-                f"wind {ws:.0f}mph from {wdr:.0f}deg"
-            )
+        if hour_range is not None:
+            if hour not in hour_range:
+                continue
+        elif not (5 <= hour <= 8):
+            continue
+        wh  = hourly["wave_height"][i]         or 0
+        wp  = hourly["wave_period"][i]          or 0
+        wd  = hourly["wave_direction"][i]       or 0
+        swh = hourly["swell_wave_height"][i]    or 0
+        swp = hourly["swell_wave_period"][i]    or 0
+        swd = hourly["swell_wave_direction"][i] or 0
+        ws  = hourly["wind_speed_10m"][i]       or 0
+        wdr = hourly["wind_direction_10m"][i]   or 0
+        lines.append(
+            f"  {t[11:16]}: wave {wh:.1f}m/{wp:.0f}s/{wd:.0f}deg | "
+            f"swell {swh:.1f}m {swp:.0f}s from {swd:.0f}deg | "
+            f"wind {ws:.0f}mph from {wdr:.0f}deg"
+        )
     if not lines:
-        return f"{spot['name']}: no dawn data"
+        return f"{spot['name']}: no data"
     return f"{spot['name']} ({spot['note']}):\n" + "\n".join(lines)
 
 
@@ -223,22 +226,29 @@ def fetch_tides(target_date):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date):
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date, right_now=False):
     api_key    = os.environ.get("ANTHROPIC_API_KEY", "")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
+    if right_now:
+        user_msg = (
+            f"Rank all checked spots for RIGHT NOW (current conditions, next 2-3 hours) on {date_label}.\n\n"
+            f"This is NOT a dawn patrol query — the surfer wants to know what's good to surf right now and over the next few hours.\n\n"
+            f"SOURCE 1 - Open-Meteo forecast (model, current + next 3 hours):\n{openmeteo_block}\n\n"
+            f"SOURCE 2 - NOAA Buoy readings (measured, real-time):\n{buoy_block}\n\n"
+            f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
+        )
+    else:
+        user_msg = (
+            f"Rank all checked spots for dawn patrol on {date_label}.\n\n"
+            f"SOURCE 1 - Open-Meteo forecast (model):\n{openmeteo_block}\n\n"
+            f"SOURCE 2 - NOAA Buoy readings (measured):\n{buoy_block}\n\n"
+            f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
+        )
     payload = json.dumps({
         "model":      "claude-sonnet-4-6",
         "max_tokens": 1200,
         "system":     SYSTEM_PROMPT,
-        "messages": [{
-            "role": "user",
-            "content": (
-                f"Rank all checked spots for dawn patrol on {date_label}.\n\n"
-                f"SOURCE 1 - Open-Meteo forecast (model):\n{openmeteo_block}\n\n"
-                f"SOURCE 2 - NOAA Buoy readings (measured):\n{buoy_block}\n\n"
-                f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
-            )
-        }]
+        "messages": [{"role": "user", "content": user_msg}]
     }).encode()
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
@@ -266,16 +276,23 @@ def get_forecast():
         body       = request.get_json(force=True) or {}
         keys       = body.get("spots", [s["key"] for s in SPOTS])
         days_ahead = int(body.get("days_ahead", 1))
-        target     = target = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles")) + timedelta(days=days_ahead)
+        right_now  = bool(body.get("right_now", False))
+        now_la     = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
+        target     = now_la + timedelta(days=days_ahead)
         spots      = [SPOT_BY_KEY[k] for k in keys if k in SPOT_BY_KEY]
 
         if not spots:
             return _cors(jsonify({"error": "No valid spots"})), 400
 
+        hour_range = None
+        if right_now:
+            cur_hour = now_la.hour
+            hour_range = set(range(cur_hour, cur_hour + 4))
+
         openmeteo_parts = []
         for spot in spots:
             try:
-                openmeteo_parts.append(fetch_openmeteo(spot, target))
+                openmeteo_parts.append(fetch_openmeteo(spot, target, hour_range=hour_range))
             except Exception as e:
                 openmeteo_parts.append(f"{spot['name']}: error - {e}")
 
@@ -289,7 +306,7 @@ def get_forecast():
         except Exception as e:
             tide_block = f"Tide data unavailable: {e}"
 
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target)
+        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, right_now=right_now)
         return _cors(jsonify({"result": result}))
 
     except Exception as e:

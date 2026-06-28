@@ -104,6 +104,7 @@
 
   <div class="section-label">When</div>
   <div class="day-selector" id="day-selector">
+    <button class="day-btn" data-days="0" onclick="selectDay(this)">Right Now</button>
     <button class="day-btn selected" data-days="1" onclick="selectDay(this)">Tomorrow</button>
     <button class="day-btn" data-days="2" onclick="selectDay(this)">In 2 days</button>
     <button class="day-btn" data-days="3" onclick="selectDay(this)">In 3 days</button>
@@ -128,7 +129,7 @@ const ZONES = [
   { label: "OB / Point Loma", spots: [
     { key: "sunset_cliffs", name: "Sunset Cliffs",    note: "Reef · W/SW swell" },
     { key: "ob_pier",       name: "OB Pier",          note: "Home base" },
-    { key: "avalanche",     name: "Avalanche",        note: "SW/W swell 197–307°" },
+    { key: "avalanche",     name: "Avalanche",        note: "Beach break · SW/W swell 197–307°" },
     { key: "ob_jetty",      name: "OB Jetty",         note: "North jetty · hollow peaks" },
   ]},
   { label: "Mission / PB", spots: [
@@ -238,13 +239,14 @@ async function getForecast() {
     return;
   }
 
+  const rightNow = daysAhead === 0;
   setLoading(true, "Fetching wave data for " + selected.size + " spots…");
 
   try {
     const res = await fetch("/api/forecast", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ spots: [...selected], days_ahead: daysAhead })
+      body: JSON.stringify({ spots: [...selected], days_ahead: daysAhead, right_now: rightNow })
     });
 
     document.getElementById("status-text").textContent = "Claude is analyzing conditions…";
