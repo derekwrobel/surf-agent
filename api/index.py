@@ -231,7 +231,7 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
         "messages": [{
             "role": "user",
             "content": (
-                f"Rank all checked spots for dawn patrol on {date_label}.\n\n"
+                f"Rank ONLY these spots for dawn patrol on {date_label}: {spot_names}. Do not include any other spots.\n\n"
                 f"SOURCE 1 - Open-Meteo forecast (model):\n{openmeteo_block}\n\n"
                 f"SOURCE 2 - NOAA Buoy readings (measured):\n{buoy_block}\n\n"
                 f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
