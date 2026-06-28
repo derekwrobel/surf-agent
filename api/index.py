@@ -10,9 +10,9 @@ import zoneinfo
 app = Flask(__name__)
 
 SPOTS = [
-    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",        "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
+    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
     {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
-    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
+    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "Beach break · SW/W swell 197-307deg"},
     {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma", "note": "N jetty · hollow peaks"},
     {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break"},
     {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break"},
@@ -49,7 +49,8 @@ When buoy data and model data differ, weight the buoy more heavily for current c
 LOCAL KNOWLEDGE:
 - South wind (160-200 degrees) -> La Jolla Shores is protected; OB/PB beach breaks get choppy
 - Extreme low tide (<= -1.2 ft) -> skip Avalanche south side, use OB pier north sandbar peaks
-- Avalanche optimal swell: 197-307 degrees (SSW/SW/W) - north/NW swell misses it
+- Avalanche: beach break (NOT a reef), optimal swell 197-307 degrees (SSW/SW/W) - north/NW swell misses it
+- OB Pier, Mission Beach, PB Dr., Crystal Pier, Tourmaline, La Jolla Shores, Blacks, Del Mar spots: all beach breaks
 - Sunset Cliffs: reef, needs solid W/SW groundswell, very tide-sensitive
 - Blacks Beach: exposed to all swells, uncrowded, hike down required
 - Del Mar Rivermouth: best with S/SW swell, shifting sandbars
@@ -226,12 +227,14 @@ def fetch_tides(target_date):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, right_now=False):
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names=None, right_now=False):
     api_key    = os.environ.get("ANTHROPIC_API_KEY", "")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
+    spots_line = f"CHECKED SPOTS ({len(spot_names)}): {', '.join(spot_names)}\nOnly rank these spots — do not mention or infer conditions for any other location.\n\n" if spot_names else ""
     if right_now:
         user_msg = (
-            f"Rank all checked spots for RIGHT NOW (current conditions, next 2-3 hours) on {date_label}.\n\n"
+            f"{spots_line}"
+            f"Rank the checked spots for RIGHT NOW (current conditions, next 2-3 hours) on {date_label}.\n\n"
             f"This is NOT a dawn patrol query — the surfer wants to know what's good to surf right now and over the next few hours.\n\n"
             f"SOURCE 1 - Open-Meteo forecast (model, current + next 3 hours):\n{openmeteo_block}\n\n"
             f"SOURCE 2 - NOAA Buoy readings (measured, real-time):\n{buoy_block}\n\n"
@@ -239,7 +242,8 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, right_now=
         )
     else:
         user_msg = (
-            f"Rank all checked spots for dawn patrol on {date_label}.\n\n"
+            f"{spots_line}"
+            f"Rank the checked spots for dawn patrol on {date_label}.\n\n"
             f"SOURCE 1 - Open-Meteo forecast (model):\n{openmeteo_block}\n\n"
             f"SOURCE 2 - NOAA Buoy readings (measured):\n{buoy_block}\n\n"
             f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
@@ -306,7 +310,7 @@ def get_forecast():
         except Exception as e:
             tide_block = f"Tide data unavailable: {e}"
 
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, right_now=right_now)
+        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names=[s["name"] for s in spots], right_now=right_now)
         return _cors(jsonify({"result": result}))
 
     except Exception as e:
