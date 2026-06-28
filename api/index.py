@@ -10,7 +10,7 @@ import zoneinfo
 app = Flask(__name__)
 
 SPOTS = [
-    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
+    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",        "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
     {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
     {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "SW/W swell 197-307deg"},
     {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma", "note": "N jetty · hollow peaks"},
