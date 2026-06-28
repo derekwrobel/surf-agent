@@ -9,35 +9,56 @@ import zoneinfo
 
 app = Flask(__name__)
 
-SPOTS = [
-    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell"},
-    {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base"},
-    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "Beach break · SW/W swell 197-307deg"},
-    {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma", "note": "N jetty · hollow peaks"},
-    {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break"},
-    {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break"},
-    {"key": "crystal",        "name": "Crystal Pier",         "lat": 32.7882, "lng": -117.2527, "zone": "Mission / PB",     "note": "PB pier break"},
-    {"key": "tourm",          "name": "Tourmaline",           "lat": 32.7972, "lng": -117.2597, "zone": "Mission / PB",     "note": "Longboard friendly"},
-    {"key": "lj_shores",      "name": "La Jolla Shores",      "lat": 32.8572, "lng": -117.2567, "zone": "La Jolla",         "note": "Protected south wind"},
-    {"key": "blacks",         "name": "Blacks Beach",         "lat": 32.8789, "lng": -117.2519, "zone": "La Jolla",         "note": "Uncrowded - hike in"},
-    {"key": "scripps",        "name": "Scripps Pier",         "lat": 32.8664, "lng": -117.2541, "zone": "La Jolla",         "note": "N La Jolla"},
-    {"key": "delmar_15",      "name": "Del Mar 15th St",      "lat": 32.9561, "lng": -117.2719, "zone": "Del Mar",          "note": "Town beach break"},
-    {"key": "delmar_river",   "name": "Del Mar Rivermouth",   "lat": 32.9609, "lng": -117.2739, "zone": "Del Mar",          "note": "Shifting sandbars"},
-    {"key": "delmar_29",      "name": "Del Mar 29th St",      "lat": 32.9680, "lng": -117.2724, "zone": "Del Mar",          "note": "N Del Mar peaks"},
-    {"key": "cardiff",        "name": "Cardiff",              "lat": 33.0136, "lng": -117.2820, "zone": "Encinitas",        "note": "Reef - long rides"},
-    {"key": "swamis",         "name": "Swami's",              "lat": 33.0367, "lng": -117.2921, "zone": "Encinitas",        "note": "Reef - best W swell"},
-    {"key": "grandview",      "name": "Grandview",            "lat": 33.0574, "lng": -117.2940, "zone": "Encinitas",        "note": "Reef - consistent"},
-]
-SPOT_BY_KEY = {s["key"]: s for s in SPOTS}
-
-NOAA_TIDE_STATION = "9410230"
-NOAA_BUOYS = [
-    {"id": "46224", "name": "Offshore Encinitas",  "note": "~10mi offshore, closest to SD"},
-    {"id": "46025", "name": "Santa Monica Basin",  "note": "tracks approaching NW groundswell"},
-    {"id": "46086", "name": "San Clemente Island", "note": "catches S/SW swell from Mexico"},
+# ---------------------------------------------------------------------------
+# Spots
+# ---------------------------------------------------------------------------
+CA_SPOTS = [
+    {"key": "sunset_cliffs",  "name": "Sunset Cliffs",       "lat": 32.7215, "lng": -117.2568, "zone": "OB / Point Loma",  "note": "Reef - W/SW swell",              "state": "CA"},
+    {"key": "ob_pier",        "name": "OB Pier",              "lat": 32.7528, "lng": -117.2553, "zone": "OB / Point Loma",  "note": "Home base",                      "state": "CA"},
+    {"key": "avalanche",      "name": "Avalanche",            "lat": 32.7544, "lng": -117.2534, "zone": "OB / Point Loma",  "note": "Beach break · SW/W swell 197-307deg", "state": "CA"},
+    {"key": "ob_jetty",       "name": "OB Jetty",             "lat": 32.7566, "lng": -117.2531, "zone": "OB / Point Loma",  "note": "N jetty · hollow peaks",         "state": "CA"},
+    {"key": "mission",        "name": "Mission Beach",        "lat": 32.7662, "lng": -117.2525, "zone": "Mission / PB",     "note": "Beach break",                    "state": "CA"},
+    {"key": "pb_dr",          "name": "PB Dr.",               "lat": 32.7795, "lng": -117.2510, "zone": "Mission / PB",     "note": "Beach break",                    "state": "CA"},
+    {"key": "crystal",        "name": "Crystal Pier",         "lat": 32.7882, "lng": -117.2527, "zone": "Mission / PB",     "note": "PB pier break",                  "state": "CA"},
+    {"key": "tourm",          "name": "Tourmaline",           "lat": 32.7972, "lng": -117.2597, "zone": "Mission / PB",     "note": "Longboard friendly",             "state": "CA"},
+    {"key": "lj_shores",      "name": "La Jolla Shores",      "lat": 32.8572, "lng": -117.2567, "zone": "La Jolla",         "note": "Protected south wind",           "state": "CA"},
+    {"key": "blacks",         "name": "Blacks Beach",         "lat": 32.8789, "lng": -117.2519, "zone": "La Jolla",         "note": "Uncrowded - hike in",            "state": "CA"},
+    {"key": "scripps",        "name": "Scripps Pier",         "lat": 32.8664, "lng": -117.2541, "zone": "La Jolla",         "note": "N La Jolla",                     "state": "CA"},
+    {"key": "delmar_15",      "name": "Del Mar 15th St",      "lat": 32.9561, "lng": -117.2719, "zone": "Del Mar",          "note": "Town beach break",               "state": "CA"},
+    {"key": "delmar_river",   "name": "Del Mar Rivermouth",   "lat": 32.9609, "lng": -117.2739, "zone": "Del Mar",          "note": "Shifting sandbars",              "state": "CA"},
+    {"key": "delmar_29",      "name": "Del Mar 29th St",      "lat": 32.9680, "lng": -117.2724, "zone": "Del Mar",          "note": "N Del Mar peaks",                "state": "CA"},
+    {"key": "cardiff",        "name": "Cardiff",              "lat": 33.0136, "lng": -117.2820, "zone": "Encinitas",        "note": "Reef - long rides",              "state": "CA"},
+    {"key": "swamis",         "name": "Swami's",              "lat": 33.0367, "lng": -117.2921, "zone": "Encinitas",        "note": "Reef - best W swell",            "state": "CA"},
+    {"key": "grandview",      "name": "Grandview",            "lat": 33.0574, "lng": -117.2940, "zone": "Encinitas",        "note": "Reef - consistent",              "state": "CA"},
 ]
 
-SYSTEM_PROMPT = """You are a surf forecast AI agent for an experienced San Diego surfer who surfs ~90% of days and does dawn patrol (5:30-7 AM window).
+FL_SPOTS = [
+    {"key": "romano",         "name": "Romano Beachfront Park", "lat": 29.2724, "lng": -81.0590, "zone": "Ormond Beach",   "note": "Beach break",                    "state": "FL"},
+    {"key": "granada",        "name": "Granada",                "lat": 29.2853, "lng": -81.0572, "zone": "Ormond Beach",   "note": "Beach break",                    "state": "FL"},
+    {"key": "bicentennial",   "name": "Bicentennial Park",      "lat": 29.2940, "lng": -81.0555, "zone": "Ormond Beach",   "note": "Beach break",                    "state": "FL"},
+    {"key": "tom_renick",     "name": "Tom Renick Park",        "lat": 29.3098, "lng": -81.0530, "zone": "Ormond Beach",   "note": "Beach break",                    "state": "FL"},
+    {"key": "main_street_fl", "name": "Main Street",            "lat": 29.4735, "lng": -81.1278, "zone": "Flagler Beach",  "note": "Beach break · near pier",        "state": "FL"},
+    {"key": "flagler_pier",   "name": "Flagler Beach Pier",     "lat": 29.4728, "lng": -81.1283, "zone": "Flagler Beach",  "note": "Pier break · E/NE swell",        "state": "FL"},
+    {"key": "marineland",     "name": "Marineland",             "lat": 29.6648, "lng": -81.2132, "zone": "Palm Coast N",   "note": "Beach break · less crowded",     "state": "FL"},
+]
+
+ALL_SPOTS   = CA_SPOTS + FL_SPOTS
+SPOT_BY_KEY = {s["key"]: s for s in ALL_SPOTS}
+
+# ---------------------------------------------------------------------------
+# State configs: tide stations, buoys, timezone, system prompt
+# ---------------------------------------------------------------------------
+STATE_CONFIG = {
+    "CA": {
+        "tide_station": "9410230",
+        "tide_label":   "La Jolla",
+        "timezone":     "America/Los_Angeles",
+        "buoys": [
+            {"id": "46224", "name": "Offshore Encinitas",  "note": "~10mi offshore, closest to SD"},
+            {"id": "46025", "name": "Santa Monica Basin",  "note": "tracks approaching NW groundswell"},
+            {"id": "46086", "name": "San Clemente Island", "note": "catches S/SW swell from Mexico"},
+        ],
+        "system_prompt": """You are a surf forecast AI agent for an experienced San Diego surfer who surfs ~90% of days and does dawn patrol (5:30-7 AM window).
 
 You will receive three data sources - cross-reference them for a reliable picture:
 - Open-Meteo: hourly model forecast per spot (wave height/period/direction, wind)
@@ -81,7 +102,60 @@ SKIP (flat or blown out):
 Notes: [Tide warnings, crowd notes, buoy vs model discrepancies. 2-3 sentences max.]
 
 Star ratings: 5=pumping, 4=good, 3=decent, 2=marginal, 1=barely surfable.
-Convert wave height to feet (1m = 3.28ft). Be direct and specific."""
+Convert wave height to feet (1m = 3.28ft). Be direct and specific.""",
+    },
+    "FL": {
+        "tide_station": "8720587",
+        "tide_label":   "St. Augustine",
+        "timezone":     "America/New_York",
+        "buoys": [
+            {"id": "41009", "name": "Canaveral 20NM E",   "note": "closest offshore buoy, tracks Atlantic swell"},
+            {"id": "41047", "name": "NE Providence",       "note": "tracks NE groundswell approaching from Atlantic"},
+        ],
+        "system_prompt": """You are a surf forecast AI agent for an experienced surfer on Florida's northeast Atlantic coast (Ormond Beach / Flagler Beach / Palm Coast area).
+
+You will receive three data sources - cross-reference them for a reliable picture:
+- Open-Meteo: hourly model forecast per spot (wave height/period/direction, wind)
+- NOAA Buoys: real measured swell offshore right now (ground truth for what's in the water)
+- NOAA Tides: tide heights and hi/lo events for St. Augustine
+
+When buoy data and model data differ, weight the buoy more heavily for current conditions; use the model for timing/trend.
+
+LOCAL KNOWLEDGE:
+- All spots are Atlantic-facing beach breaks - swell comes from the east/northeast
+- Best swell directions: NE (0-60 degrees) for most spots; E (60-120 degrees) also works; S/SE swell wraps less and is typically small
+- Wind: offshore = westerly (240-300 degrees), makes waves clean; onshore = easterly (60-120 degrees), blown out
+- NW wind can be offshore but choppy in winter; dawn is often glassy before sea breeze fills in
+- Wave period: >12s = quality groundswell (hurricane or nor'easter); 8-12s = moderate; <8s = wind swell, choppy
+- Flagler Beach Pier: pier creates sandbars on both sides, peaks best on N/NE swell
+- Tide: mid to higher tide generally better on these beach breaks; extreme low exposes rocks/shell
+- Good height: 0.3-1.5m (1-5ft). Under 0.2m = flat. Over 2m = big day for FL
+- Hurricane swells (Aug-Oct) and nor'easters (Oct-Mar) produce best surf
+- Summer (Jun-Aug): often small and onshore; early morning before sea breeze is best window
+
+Never say stay home - always rank and recommend.
+
+Output format:
+
+FORECAST - [Day, Month Date]
+Conditions: [1-sentence cross-referenced swell/wind summary]
+
+RANKED SPOTS
+1. [Spot name] [1-5 stars]  [height ft] | [period]s | [swell dir]deg | wind [speed]mph [dir]deg | tide [ft]
+   [One sentence: why it's #1 today]
+2. [Spot name] ...
+   [One sentence]
+(all checked spots, best to worst)
+
+SKIP (flat or blown out):
+- [Spot name]: [one-word reason]
+
+Notes: [Tide warnings, crowd notes, buoy vs model discrepancies. 2-3 sentences max.]
+
+Star ratings: 5=pumping, 4=good, 3=decent, 2=marginal, 1=barely surfable.
+Convert wave height to feet (1m = 3.28ft). Be direct and specific.""",
+    },
+}
 
 
 def fetch_url(url, timeout=10):
@@ -130,9 +204,9 @@ def fetch_openmeteo(spot, target_date, hour_range=None):
     return f"{spot['name']} ({spot['note']}):\n" + "\n".join(lines)
 
 
-def fetch_buoys():
+def fetch_buoys(buoy_list):
     results = []
-    for buoy in NOAA_BUOYS:
+    for buoy in buoy_list:
         url = f"https://www.ndbc.noaa.gov/data/realtime2/{buoy['id']}.txt"
         try:
             text = fetch_url(url)
@@ -173,14 +247,14 @@ def fetch_buoys():
     return "\n\n".join(results)
 
 
-def fetch_tides(target_date):
+def fetch_tides(target_date, tide_station, tide_label):
     date_str = target_date.strftime("%Y%m%d")
     base = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
 
     def get(interval):
         p = urllib.parse.urlencode({
             "begin_date": date_str, "end_date": date_str,
-            "station": NOAA_TIDE_STATION, "product": "predictions",
+            "station": tide_station, "product": "predictions",
             "datum": "MLLW", "time_zone": "lst_ldt",
             "interval": interval, "units": "english",
             "application": "surf_agent", "format": "json",
@@ -215,7 +289,7 @@ def fetch_tides(target_date):
     if any(l <= -1.2 for l in lows):
         warning = f"\n  EXTREME LOW TIDE ({min(lows):+.2f} ft) - skip Avalanche south side, use OB pier north sandbar"
 
-    out = [f"NOAA Tides - La Jolla ({NOAA_TIDE_STATION}), {target_date.strftime('%A %b')} {target_date.day}:"]
+    out = [f"NOAA Tides - {tide_label} ({tide_station}), {target_date.strftime('%A %b')} {target_date.day}:"]
     if hilo_lines:
         out.append("  Hi/Lo events:")
         out.extend(hilo_lines)
@@ -227,15 +301,15 @@ def fetch_tides(target_date):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names=None, right_now=False):
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date, system_prompt, spot_names=None, right_now=False):
     api_key    = os.environ.get("ANTHROPIC_API_KEY", "")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
-    spots_line = f"CHECKED SPOTS ({len(spot_names)}): {', '.join(spot_names)}\nOnly rank these spots — do not mention or infer conditions for any other location.\n\n" if spot_names else ""
+    spots_line = f"CHECKED SPOTS ({len(spot_names)}): {', '.join(spot_names)}\nOnly rank these spots - do not mention or infer conditions for any other location.\n\n" if spot_names else ""
     if right_now:
         user_msg = (
             f"{spots_line}"
             f"Rank the checked spots for RIGHT NOW (current conditions, next 2-3 hours) on {date_label}.\n\n"
-            f"This is NOT a dawn patrol query — the surfer wants to know what's good to surf right now and over the next few hours.\n\n"
+            f"This is NOT a dawn patrol query - the surfer wants to know what's good to surf right now and over the next few hours.\n\n"
             f"SOURCE 1 - Open-Meteo forecast (model, current + next 3 hours):\n{openmeteo_block}\n\n"
             f"SOURCE 2 - NOAA Buoy readings (measured, real-time):\n{buoy_block}\n\n"
             f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
@@ -251,8 +325,8 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
     payload = json.dumps({
         "model":      "claude-sonnet-4-6",
         "max_tokens": 1200,
-        "system":     SYSTEM_PROMPT,
-        "messages": [{"role": "user", "content": user_msg}]
+        "system":     system_prompt,
+        "messages":   [{"role": "user", "content": user_msg}]
     }).encode()
     req = urllib.request.Request(
         "https://api.anthropic.com/v1/messages",
@@ -271,18 +345,21 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
 def get_spots():
     if request.method == "OPTIONS":
         return _cors(jsonify({}))
-    return _cors(jsonify({"spots": SPOTS}))
+    return _cors(jsonify({"spots": ALL_SPOTS}))
 
 
 @app.route("/api/forecast", methods=["POST"])
 def get_forecast():
     try:
         body       = request.get_json(force=True) or {}
-        keys       = body.get("spots", [s["key"] for s in SPOTS])
+        keys       = body.get("spots", [])
         days_ahead = int(body.get("days_ahead", 1))
         right_now  = bool(body.get("right_now", False))
-        now_la     = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
-        target     = now_la + timedelta(days=days_ahead)
+        state      = body.get("state", "CA")
+        cfg        = STATE_CONFIG.get(state, STATE_CONFIG["CA"])
+        tz         = zoneinfo.ZoneInfo(cfg["timezone"])
+        now_local  = datetime.now(tz)
+        target     = now_local + timedelta(days=days_ahead)
         spots      = [SPOT_BY_KEY[k] for k in keys if k in SPOT_BY_KEY]
 
         if not spots:
@@ -290,7 +367,7 @@ def get_forecast():
 
         hour_range = None
         if right_now:
-            cur_hour = now_la.hour
+            cur_hour   = now_local.hour
             hour_range = set(range(cur_hour, cur_hour + 4))
 
         openmeteo_parts = []
@@ -301,16 +378,21 @@ def get_forecast():
                 openmeteo_parts.append(f"{spot['name']}: error - {e}")
 
         try:
-            buoy_block = fetch_buoys()
+            buoy_block = fetch_buoys(cfg["buoys"])
         except Exception as e:
             buoy_block = f"Buoy data unavailable: {e}"
 
         try:
-            tide_block = fetch_tides(target)
+            tide_block = fetch_tides(target, cfg["tide_station"], cfg["tide_label"])
         except Exception as e:
             tide_block = f"Tide data unavailable: {e}"
 
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names=[s["name"] for s in spots], right_now=right_now)
+        result = call_claude(
+            "\n\n".join(openmeteo_parts), buoy_block, tide_block, target,
+            system_prompt=cfg["system_prompt"],
+            spot_names=[s["name"] for s in spots],
+            right_now=right_now,
+        )
         return _cors(jsonify({"result": result}))
 
     except Exception as e:
