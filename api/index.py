@@ -287,7 +287,8 @@ def get_forecast():
         except Exception as e:
             tide_block = f"Tide data unavailable: {e}"
 
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target)
+        spot_names = ", ".join(s["name"] for s in spots)
+        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names)
         return _cors(jsonify({"result": result}))
 
     except Exception as e:
