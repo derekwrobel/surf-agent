@@ -264,7 +264,7 @@ def get_forecast():
         body       = request.get_json(force=True) or {}
         keys       = body.get("spots", [s["key"] for s in SPOTS])
         days_ahead = int(body.get("days_ahead", 1))
-        target     = datetime.now() + timedelta(days=days_ahead)
+        target     = target = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles")) + timedelta(days=days_ahead)
         spots      = [SPOT_BY_KEY[k] for k in keys if k in SPOT_BY_KEY]
 
         if not spots:
