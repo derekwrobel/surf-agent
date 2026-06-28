@@ -221,7 +221,7 @@ def fetch_tides(target_date):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names):
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date):
     api_key    = os.environ.get("ANTHROPIC_API_KEY", "")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
     payload = json.dumps({
@@ -231,7 +231,7 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
         "messages": [{
             "role": "user",
             "content": (
-                f"Rank ONLY these spots for dawn patrol on {date_label}: {spot_names}. Do not include any other spots.\n\n"
+                f"Rank all checked spots for dawn patrol on {date_label}.\n\n"
                 f"SOURCE 1 - Open-Meteo forecast (model):\n{openmeteo_block}\n\n"
                 f"SOURCE 2 - NOAA Buoy readings (measured):\n{buoy_block}\n\n"
                 f"SOURCE 3 - NOAA Tide predictions:\n{tide_block}"
@@ -287,8 +287,7 @@ def get_forecast():
         except Exception as e:
             tide_block = f"Tide data unavailable: {e}"
 
-        spot_names = ", ".join(s["name"] for s in spots)
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names)
+        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target)
         return _cors(jsonify({"result": result}))
 
     except Exception as e:
