@@ -238,6 +238,7 @@ async function getForecast() {
   }
 
   setLoading(true, "Fetching wave data for " + selected.size + " spots…");
+alert('Sending spots: ' + [...selected].join(', '));
 
   try {
     const res = await fetch("/api/forecast", {
