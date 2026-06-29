@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 import json, os, urllib.request, urllib.parse, zoneinfo, hashlib
 from datetime import datetime, timedelta
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
 from cache import cache_get, cache_set, cache_available
 
 app = Flask(__name__)
