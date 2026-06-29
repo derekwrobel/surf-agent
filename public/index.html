@@ -93,6 +93,21 @@
 
   .error { color: #dc2626; font-size: 13px; margin-top: 12px; padding: 12px; background: #fef2f2; border-radius: 10px; }
   @media (prefers-color-scheme: dark) { .error { background: #2a1010; color: #f87171; } }
+
+  .feedback-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
+  .feedback-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+  .feedback-textarea { width: 100%; min-height: 80px; padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; resize: vertical; }
+  .feedback-textarea:focus { outline: none; border: 1.5px solid var(--green); }
+  .feedback-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
+  .feedback-hint { font-size: 11px; color: var(--text-secondary); flex: 1; }
+  .feedback-submit { padding: 8px 16px; background: var(--green); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .feedback-submit:active { opacity: 0.8; }
+  .feedback-saved { font-size: 12px; color: var(--green); margin-top: 6px; display: none; }
+  .past-feedback { margin-top: 12px; border-top: 0.5px solid var(--border); padding-top: 10px; }
+  .past-feedback-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .past-feedback-item { font-size: 12px; color: var(--text-secondary); padding: 6px 0; border-bottom: 0.5px solid var(--border); line-height: 1.5; }
+  .past-feedback-item:last-child { border-bottom: none; }
+  .clear-feedback { font-size: 11px; color: #dc2626; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -141,6 +156,23 @@
 
   <div id="result-card" style="display:none;" class="result-card">
     <div class="result-text" id="result-text"></div>
+  </div>
+
+  <div id="feedback-card" style="display:none;" class="feedback-card">
+    <div class="feedback-label">How was this forecast? Your notes help improve future predictions.</div>
+    <textarea id="feedback-text" class="feedback-textarea" placeholder="e.g. Avalanche was actually 2ft bigger than predicted, swell filled in an hour later than expected. Wind was perfect at 6am at OB Pier."></textarea>
+    <div class="feedback-footer">
+      <div class="feedback-hint">Saved locally · included in your next forecast</div>
+      <button class="feedback-submit" onclick="submitFeedback()">Save feedback</button>
+    </div>
+    <div class="feedback-saved" id="feedback-saved">✓ Saved — Claude will use this next time</div>
+    <div id="past-feedback-section" class="past-feedback" style="display:none;">
+      <div class="past-feedback-title">
+        <span>Your saved notes for <span id="past-feedback-state"></span></span>
+        <span class="clear-feedback" onclick="clearFeedback()">Clear all</span>
+      </div>
+      <div id="past-feedback-list"></div>
+    </div>
   </div>
 </div>
 
@@ -338,6 +370,7 @@ async function getForecast() {
         spots: [...selected],
         state: currentState,
         target_datetime: targetDatetime,
+        feedback: loadFeedback(currentState),
       })
     });
 
@@ -351,11 +384,78 @@ async function getForecast() {
     document.getElementById("result-text").innerHTML = formatResult(data.result);
     card.style.display = "block";
     card.scrollIntoView({ behavior: "smooth", block: "start" });
+    showFeedbackCard();
   } catch(e) {
     setLoading(false);
     document.getElementById("error").style.display = "block";
     document.getElementById("error").textContent = "Error: " + e.message;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Feedback
+// ---------------------------------------------------------------------------
+const FEEDBACK_KEY = "surf-agent-feedback";
+const MAX_FEEDBACK = 5;
+
+function loadFeedback(state) {
+  try {
+    const data = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "{}");
+    return data[state] || [];
+  } catch { return []; }
+}
+
+function saveFeedback(state, entries) {
+  try {
+    const data = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "{}");
+    data[state] = entries;
+    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+function showFeedbackCard() {
+  const card = document.getElementById("feedback-card");
+  document.getElementById("feedback-text").value = "";
+  document.getElementById("feedback-saved").style.display = "none";
+  card.style.display = "block";
+  renderPastFeedback();
+}
+
+function renderPastFeedback() {
+  const entries = loadFeedback(currentState);
+  const section = document.getElementById("past-feedback-section");
+  if (entries.length === 0) { section.style.display = "none"; return; }
+  section.style.display = "block";
+  document.getElementById("past-feedback-state").textContent = currentState === "CA" ? "California" : "Florida";
+  const list = document.getElementById("past-feedback-list");
+  list.innerHTML = entries.slice().reverse().map(e =>
+    `<div class="past-feedback-item">${e.replace(/</g,"&lt;")}</div>`
+  ).join("");
+}
+
+function submitFeedback() {
+  const text = document.getElementById("feedback-text").value.trim();
+  if (!text) return;
+
+  // Prepend date/time context automatically
+  const timeVal = document.getElementById("session-time").value;
+  const label   = timeVal ? new Date(timeVal).toLocaleString([], {dateStyle:"medium", timeStyle:"short"}) : "";
+  const entry   = (label ? `[${label}] ` : "") + text;
+
+  const entries = loadFeedback(currentState);
+  entries.push(entry);
+  if (entries.length > MAX_FEEDBACK) entries.splice(0, entries.length - MAX_FEEDBACK);
+  saveFeedback(currentState, entries);
+
+  document.getElementById("feedback-text").value = "";
+  document.getElementById("feedback-saved").style.display = "block";
+  setTimeout(() => { document.getElementById("feedback-saved").style.display = "none"; }, 3000);
+  renderPastFeedback();
+}
+
+function clearFeedback() {
+  saveFeedback(currentState, []);
+  renderPastFeedback();
 }
 
 renderSpots();

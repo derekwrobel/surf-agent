@@ -296,14 +296,22 @@ def fetch_tides(target_date, tide_station, tide_label):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, time_label, system_prompt, spot_names):
+def call_claude(openmeteo_block, buoy_block, tide_block, time_label, system_prompt, spot_names, feedback=None):
     api_key   = os.environ.get("ANTHROPIC_API_KEY", "")
     spots_line = (
         f"CHECKED SPOTS ({len(spot_names)}): {', '.join(spot_names)}\n"
         f"Only rank these spots - do not mention or infer conditions for any other location.\n\n"
     )
+    feedback_block = ""
+    if feedback:
+        notes = "\n".join(f"- {f}" for f in feedback)
+        feedback_block = (
+            f"SURFER FEEDBACK FROM PAST FORECASTS (use this to calibrate your predictions):\n"
+            f"{notes}\n\n"
+        )
     user_msg = (
         f"{spots_line}"
+        f"{feedback_block}"
         f"Rank the checked spots for the session window: {time_label}\n\n"
         f"SOURCE 1 - Open-Meteo forecast (model, for this time window):\n{openmeteo_block}\n\n"
         f"SOURCE 2 - NOAA Buoy readings (measured, real-time):\n{buoy_block}\n\n"
@@ -339,8 +347,9 @@ def get_spots():
 def get_forecast():
     try:
         body  = request.get_json(force=True) or {}
-        keys  = body.get("spots", [])
-        state = body.get("state", "CA")
+        keys     = body.get("spots", [])
+        state    = body.get("state", "CA")
+        feedback = body.get("feedback", [])
         cfg   = STATE_CONFIG.get(state, STATE_CONFIG["CA"])
         spots = [SPOT_BY_KEY[k] for k in keys if k in SPOT_BY_KEY]
 
@@ -390,6 +399,7 @@ def get_forecast():
         result = call_claude(
             "\n\n".join(openmeteo_parts), buoy_block, tide_block,
             time_label, cfg["system_prompt"], [s["name"] for s in spots],
+            feedback=feedback,
         )
         return _cors(jsonify({"result": result}))
 
