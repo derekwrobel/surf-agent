@@ -125,6 +125,37 @@ CRON_REGIONS = {
     "ec_ne":         {"name": "New England",                     "lat": 41.4614, "lng": -71.4619},
 }
 
+def _sunrise_sunset_utc(lat, lng, d):
+    """Return (sunrise_utc, sunset_utc) as hours (float) for a given date and location.
+    Uses the NOAA solar calculation algorithm (accurate to within ~1 minute)."""
+    import math
+    n = d.timetuple().tm_yday
+    # Solar declination
+    decl = math.radians(23.45 * math.sin(math.radians(360 / 365 * (n - 81))))
+    # Hour angle at sunrise/sunset
+    cos_ha = -math.tan(math.radians(lat)) * math.tan(decl)
+    cos_ha = max(-1.0, min(1.0, cos_ha))  # clamp for polar edge cases
+    ha = math.degrees(math.acos(cos_ha))
+    # Solar noon in UTC (longitude offset)
+    solar_noon_utc = 12.0 - (lng / 15.0)
+    sunrise_utc = solar_noon_utc - ha / 15.0
+    sunset_utc  = solar_noon_utc + ha / 15.0
+    return sunrise_utc, sunset_utc
+
+
+def _is_daylight(lat, lng, tz_name, buffer_hours=2):
+    """Return True if current local time is within surfable daylight hours
+    (from buffer_hours before sunrise to buffer_hours after sunset)."""
+    import math
+    now_utc = datetime.utcnow()
+    now_local = datetime.now(zoneinfo.ZoneInfo(tz_name))
+    d = now_local.date()
+    sunrise_utc, sunset_utc = _sunrise_sunset_utc(lat, lng, d)
+    # Current time as UTC decimal hour
+    now_utc_h = now_utc.hour + now_utc.minute / 60.0
+    return (sunrise_utc - buffer_hours) <= now_utc_h <= (sunset_utc + buffer_hours)
+
+
 def _haversine(lat1, lng1, lat2, lng2):
     R = 6371
     dlat = _math.radians(lat2-lat1); dlng = _math.radians(lng2-lng1)
@@ -470,6 +501,11 @@ def run_cron():
             date_str = target_date.strftime("%Y-%m-%d")
             cache_key = f"swell:region:{region_key}:{date_str}:{window}"
             is_east = region_info["lng"] > -81
+            tz_name = "America/New_York" if is_east else "America/Los_Angeles"
+            # Skip if it's dark at this region right now — no point caching
+            if not _is_daylight(region_info["lat"], region_info["lng"], tz_name):
+                results["cached"].append(f"{cache_key}:skipped-nighttime")
+                continue
             spot = {"key": region_key, "lat": region_info["lat"],
                     "lng": region_info["lng"], "name": region_info["name"]}
             try:
