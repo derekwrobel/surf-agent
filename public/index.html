@@ -9,262 +9,330 @@
 <title>Surf Agent</title>
 <style>
   :root {
-    --green: #1D9E75;
-    --green-light: #E1F5EE;
-    --green-dark: #0F6E56;
-    --text: #1a1a1a;
-    --text-secondary: #6b7280;
-    --border: rgba(0,0,0,0.1);
-    --bg: #f9f9f8;
-    --card: #ffffff;
-    --radius: 12px;
+    --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
+    --text: #1a1a1a; --text-secondary: #6b7280; --text-tertiary: #9ca3af;
+    --border: rgba(0,0,0,0.1); --bg: #f9f9f8; --card: #ffffff; --radius: 12px;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --text: #f0f0ee;
-      --text-secondary: #9ca3af;
-      --border: rgba(255,255,255,0.1);
-      --bg: #111110;
-      --card: #1c1c1a;
-      --green-light: #0a2e22;
-    }
+    :root { --text: #f0f0ee; --text-secondary: #9ca3af; --border: rgba(255,255,255,0.1); --bg: #111110; --card: #1c1c1a; --green-light: #0a2e22; }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
   header { padding: 52px 20px 16px; background: var(--card); border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; }
   header h1 { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  header h1 span.wave { font-size: 22px; }
   header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-
   .content { padding: 16px 16px 100px; max-width: 600px; margin: 0 auto; }
-
   .section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin: 20px 0 8px; }
   .section-label:first-of-type { margin-top: 8px; }
 
-  .zone-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.05em; text-transform: uppercase; margin: 14px 0 6px; padding-left: 2px; }
+  /* Location selector */
+  .select-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .loc-select { flex: 1; font-size: 14px; padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+  .loc-select:disabled { opacity: 0.4; }
 
-  .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
-  .spot-chip { padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); cursor: pointer; user-select: none; transition: all 0.15s; }
+  /* Spot chips */
+  .zone-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin: 14px 0 6px; }
+  .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 4px; }
+  .spot-chip { padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); cursor: pointer; user-select: none; }
   .spot-chip.selected { border: 1.5px solid var(--green); background: var(--green-light); }
-  .spot-chip-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .spot-chip-name { font-size: 12px; font-weight: 500; color: var(--text); }
   .spot-chip.selected .spot-chip-name { color: var(--green-dark); }
-  .spot-chip-note { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+  .spot-chip-note { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; line-height: 1.3; }
   .spot-chip.selected .spot-chip-note { color: var(--green); }
-
   .quick-btns { display: flex; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
   .quick-btn { font-size: 12px; padding: 6px 12px; border: 0.5px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text-secondary); cursor: pointer; }
-  .quick-btn:active { opacity: 0.7; }
+  .count-pill { font-size: 11px; padding: 2px 8px; background: var(--green-light); color: var(--green-dark); border-radius: 20px; margin-left: 6px; font-weight: 500; }
 
-  .state-selector { display: flex; gap: 8px; }
-  .state-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text-secondary); font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; }
-  .state-btn.active { border: 2px solid var(--green); background: var(--green-light); color: var(--green-dark); }
-
-  .datetime-row { display: flex; gap: 8px; align-items: center; }
-  .datetime-input {
-    flex: 1; padding: 10px 12px;
-    border: 0.5px solid var(--border); border-radius: 10px;
-    background: var(--card); color: var(--text);
-    font-size: 14px; font-family: inherit;
-    appearance: none; -webkit-appearance: none;
-  }
-  .datetime-input:focus { outline: none; border: 1.5px solid var(--green); }
-  .now-btn { padding: 10px 14px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; }
+  /* When selector */
+  .now-btn { width: 100%; padding: 13px; background: transparent; color: var(--green); border: 1.5px solid var(--green); border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
   .now-btn:active { opacity: 0.7; }
-
-  .window-note { font-size: 12px; color: var(--text-secondary); margin-top: 6px; }
-
-  .go-btn { width: 100%; padding: 16px; background: var(--green); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 20px; transition: opacity 0.15s; }
+  .now-btn:disabled { opacity: 0.4; }
+  .day-selector { display: flex; gap: 8px; }
+  .day-btn { flex: 1; padding: 10px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; text-align: center; }
+  .day-btn.selected { border: 1.5px solid var(--green); background: var(--green-light); color: var(--green-dark); font-weight: 500; }
+  .go-btn { width: 100%; padding: 16px; background: var(--green); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
   .go-btn:active { opacity: 0.85; }
   .go-btn:disabled { opacity: 0.4; }
 
+  /* Output */
   .result-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 20px; }
   .result-text { font-size: 14px; line-height: 1.75; white-space: pre-wrap; color: var(--text); }
   .result-text .stars { color: #f59e0b; }
-
   .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -3px; margin-right: 8px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1s infinite; flex-shrink: 0; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-  .count-pill { font-size: 11px; padding: 2px 8px; background: var(--green-light); color: var(--green-dark); border-radius: 20px; margin-left: 6px; font-weight: 500; }
-
   .error { color: #dc2626; font-size: 13px; margin-top: 12px; padding: 12px; background: #fef2f2; border-radius: 10px; }
   @media (prefers-color-scheme: dark) { .error { background: #2a1010; color: #f87171; } }
-
-  .feedback-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
-  .feedback-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
-  .feedback-textarea { width: 100%; min-height: 80px; padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: 13px; font-family: inherit; resize: vertical; }
-  .feedback-textarea:focus { outline: none; border: 1.5px solid var(--green); }
-  .feedback-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; gap: 8px; }
-  .feedback-hint { font-size: 11px; color: var(--text-secondary); flex: 1; }
-  .feedback-submit { padding: 8px 16px; background: var(--green); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .feedback-submit:active { opacity: 0.8; }
-  .feedback-saved { font-size: 12px; color: var(--green); margin-top: 6px; display: none; }
-  .past-feedback { margin-top: 12px; border-top: 0.5px solid var(--border); padding-top: 10px; }
-  .past-feedback-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; display: flex; justify-content: space-between; }
-  .past-feedback-item { font-size: 12px; color: var(--text-secondary); padding: 6px 0; border-bottom: 0.5px solid var(--border); line-height: 1.5; }
-  .past-feedback-item:last-child { border-bottom: none; }
-  .clear-feedback { font-size: 11px; color: #dc2626; cursor: pointer; }
+  .empty-state { text-align: center; padding: 24px 16px; color: var(--text-tertiary); font-size: 13px; }
 </style>
 </head>
 <body>
-
 <header>
-  <h1><span class="wave">🌊</span> Surf Agent</h1>
-  <p>Forecast powered by Open-Meteo + Claude</p>
+  <h1><span>🌊</span> Surf Agent</h1>
+  <p>Dawn patrol forecast · Open-Meteo + NOAA + Claude</p>
 </header>
 
 <div class="content">
 
-  <div class="section-label" style="margin-top:8px;">State</div>
-  <div class="state-selector">
-    <button class="state-btn active" id="state-CA" onclick="selectState('CA')">🌴 California</button>
-    <button class="state-btn"        id="state-FL" onclick="selectState('FL')">🌊 Florida</button>
+  <div class="section-label">Location</div>
+  <div class="select-row">
+    <select class="loc-select" id="sel-state" onchange="onStateChange()">
+      <option value="">State / Coast</option>
+    </select>
+    <select class="loc-select" id="sel-region" onchange="onRegionChange()" disabled>
+      <option value="">Region</option>
+    </select>
   </div>
 
-  <div style="display:flex;align-items:center;margin-top:20px;">
+  <div style="display:flex;align-items:center;margin-top:16px;margin-bottom:6px;">
     <div class="section-label" style="margin:0;">Spots</div>
     <span class="count-pill" id="count-pill">0 selected</span>
   </div>
-
-  <div class="quick-btns" style="margin-top:8px;">
+  <div class="quick-btns">
     <button class="quick-btn" onclick="selectAll()">All</button>
     <button class="quick-btn" onclick="clearAll()">None</button>
-    <button class="quick-btn" onclick="selectDefaults()">Defaults</button>
   </div>
-
-  <div id="spot-sections"></div>
+  <div id="spot-sections"><div class="empty-state">Select a region above to see spots</div></div>
 
   <div class="section-label">When</div>
-  <div class="datetime-row">
-    <input type="datetime-local" id="session-time" class="datetime-input">
-    <button class="now-btn" onclick="setNow()">Now</button>
+  <button class="now-btn" id="now-btn" onclick="getForecastNow()">⚡ Right Now</button>
+  <div class="day-selector">
+    <button class="day-btn selected" data-days="1" onclick="selectDay(this)">Tomorrow</button>
+    <button class="day-btn" data-days="2" onclick="selectDay(this)">In 2 days</button>
+    <button class="day-btn" data-days="3" onclick="selectDay(this)">In 3 days</button>
   </div>
-  <div class="window-note" id="window-note"></div>
-
   <button class="go-btn" id="go-btn" onclick="getForecast()">Get forecast</button>
 
   <div id="status-row" style="display:none;" class="status-row">
     <div class="dot"></div>
     <span id="status-text">Fetching wave data…</span>
   </div>
-
   <div id="error" style="display:none;" class="error"></div>
-
   <div id="result-card" style="display:none;" class="result-card">
     <div class="result-text" id="result-text"></div>
-  </div>
-
-  <div id="feedback-card" style="display:none;" class="feedback-card">
-    <div class="feedback-label">How was this forecast? Your notes help improve future predictions.</div>
-    <textarea id="feedback-text" class="feedback-textarea" placeholder="e.g. Avalanche was actually 2ft bigger than predicted, swell filled in an hour later than expected. Wind was perfect at 6am at OB Pier."></textarea>
-    <div class="feedback-footer">
-      <div class="feedback-hint">Saved locally · included in your next forecast</div>
-      <button class="feedback-submit" onclick="submitFeedback()">Save feedback</button>
-    </div>
-    <div class="feedback-saved" id="feedback-saved">✓ Saved — Claude will use this next time</div>
-    <div id="past-feedback-section" class="past-feedback" style="display:none;">
-      <div class="past-feedback-title">
-        <span>Your saved notes for <span id="past-feedback-state"></span></span>
-        <span class="clear-feedback" onclick="clearFeedback()">Clear all</span>
-      </div>
-      <div id="past-feedback-list"></div>
-    </div>
   </div>
 </div>
 
 <script>
-const ZONES = {
-  CA: [
-    { label: "OB / Point Loma", spots: [
-      { key: "sunset_cliffs", name: "Sunset Cliffs",    note: "Reef · W/SW swell" },
-      { key: "ob_pier",       name: "OB Pier",          note: "Home base" },
-      { key: "avalanche",     name: "Avalanche",        note: "Beach break · SW/W swell 197–307°" },
-      { key: "ob_jetty",      name: "OB Jetty",         note: "North jetty · hollow peaks" },
-    ]},
-    { label: "Mission / PB", spots: [
-      { key: "mission",  name: "Mission Beach", note: "Beach break" },
-      { key: "pb_dr",    name: "PB Dr.",        note: "Beach break" },
-      { key: "crystal",  name: "Crystal Pier",  note: "PB pier break" },
-      { key: "tourm",    name: "Tourmaline",    note: "Longboard friendly" },
-    ]},
-    { label: "La Jolla", spots: [
-      { key: "lj_shores", name: "La Jolla Shores", note: "Protected south wind" },
-      { key: "blacks",    name: "Blacks Beach",    note: "Uncrowded · hike in" },
-      { key: "scripps",   name: "Scripps Pier",    note: "N La Jolla" },
-    ]},
-    { label: "Del Mar", spots: [
-      { key: "delmar_15",    name: "Del Mar 15th St",    note: "Town beach break" },
-      { key: "delmar_river", name: "Del Mar Rivermouth", note: "Shifting sandbars" },
-      { key: "delmar_29",    name: "Del Mar 29th St",    note: "N Del Mar peaks" },
-    ]},
-    { label: "Encinitas", spots: [
-      { key: "cardiff",   name: "Cardiff",   note: "Reef · long rides" },
-      { key: "swamis",    name: "Swami's",   note: "Reef · best W swell" },
-      { key: "grandview", name: "Grandview", note: "Reef · consistent" },
-    ]},
-  ],
-  FL: [
-    { label: "Ormond Beach", spots: [
-      { key: "romano",       name: "Romano Beachfront Park", note: "Beach break" },
-      { key: "granada",      name: "Granada",                note: "Beach break" },
-      { key: "bicentennial", name: "Bicentennial Park",      note: "Beach break" },
-      { key: "tom_renick",   name: "Tom Renick Park",        note: "Beach break" },
-    ]},
-    { label: "Flagler Beach", spots: [
-      { key: "main_street_fl", name: "Main Street",        note: "Beach break · near pier" },
-      { key: "flagler_pier",   name: "Flagler Beach Pier", note: "Pier break · E/NE swell" },
-    ]},
-    { label: "Palm Coast N", spots: [
-      { key: "marineland", name: "Marineland", note: "Beach break · less crowded" },
-    ]},
-  ],
+const SPOTS_DB = {
+  "California": {
+    "San Diego": [
+      {key:"sunset_cliffs", name:"Sunset Cliffs",      note:"Reef · W/SW swell"},
+      {key:"ob_pier",       name:"OB Pier",            note:"Home base"},
+      {key:"ob_jetty",      name:"OB Jetty",           note:"N jetty · hollow peaks"},
+      {key:"avalanche",     name:"Avalanche",          note:"SW/W swell 197-307°"},
+      {key:"mission",       name:"Mission Beach",      note:"Beach break"},
+      {key:"pb_dr",         name:"PB Dr.",             note:"Beach break"},
+      {key:"crystal",       name:"Crystal Pier",       note:"PB pier break"},
+      {key:"tourm",         name:"Tourmaline",         note:"Longboard friendly"},
+      {key:"lj_shores",     name:"La Jolla Shores",    note:"Protected south wind"},
+      {key:"blacks",        name:"Blacks Beach",       note:"Uncrowded · hike in"},
+      {key:"scripps",       name:"Scripps Pier",       note:"N La Jolla"},
+      {key:"delmar_15",     name:"Del Mar 15th St",    note:"Town beach break"},
+      {key:"delmar_river",  name:"Del Mar Rivermouth", note:"Shifting sandbars"},
+      {key:"delmar_29",     name:"Del Mar 29th St",    note:"N Del Mar peaks"},
+      {key:"cardiff",       name:"Cardiff",            note:"Reef · long rides"},
+      {key:"swamis",        name:"Swami's",            note:"Reef · best W swell"},
+      {key:"grandview",     name:"Grandview",          note:"Reef · consistent"},
+    ],
+    "Orange County": [
+      {key:"trestles",      name:"Trestles",           note:"World class · multiple breaks"},
+      {key:"lowers",        name:"Lowers",             note:"CT contest site"},
+      {key:"san_onofre",    name:"San Onofre",         note:"Longboard mecca"},
+      {key:"doheny",        name:"Doheny",             note:"Beginner friendly"},
+      {key:"salt_creek",    name:"Salt Creek",         note:"Powerful beach break"},
+      {key:"brooks_street", name:"Brooks Street",      note:"Laguna · reef"},
+      {key:"thalia",        name:"Thalia Street",      note:"Laguna · consistent"},
+      {key:"huntington",    name:"Huntington Beach",   note:"Surf City USA"},
+      {key:"newps_pier",    name:"Newport Pier",       note:"Classic beach break"},
+      {key:"the_wedge",     name:"The Wedge",          note:"Bodysurf · huge shore break"},
+    ],
+    "Los Angeles": [
+      {key:"malibu",        name:"Malibu First Point", note:"Iconic longboard wave"},
+      {key:"zuma",          name:"Zuma Beach",         note:"Beach break · consistent"},
+      {key:"el_porto",      name:"El Porto",           note:"Manhattan Beach · powerful"},
+      {key:"manhattan_pier",name:"Manhattan Pier",     note:"Beach break"},
+      {key:"hermosa",       name:"Hermosa Beach",      note:"Beach break"},
+      {key:"venice",        name:"Venice Beach",       note:"Beach break"},
+      {key:"topanga",       name:"Topanga",            note:"Beach break · consistent"},
+      {key:"county_line",   name:"County Line",        note:"Ventura/LA border"},
+    ],
+    "Ventura / Santa Barbara": [
+      {key:"rincon",        name:"Rincon",             note:"Queen of the Coast"},
+      {key:"c_street",      name:"C Street",           note:"Long point break"},
+      {key:"emma_wood",     name:"Emma Wood",          note:"Beach break · consistent"},
+      {key:"ventura_pier",  name:"Ventura Pier",       note:"Beach break"},
+      {key:"hammonds",      name:"Hammonds",           note:"Reef · right point"},
+      {key:"leadbetter",    name:"Leadbetter",         note:"SB · longboard"},
+      {key:"campus_pt",     name:"Campus Point",       note:"UCSB · reef right"},
+    ],
+    "Central Coast": [
+      {key:"pismo",         name:"Pismo Beach",        note:"Beach break"},
+      {key:"shell_beach",   name:"Shell Beach",        note:"Reef · consistent"},
+      {key:"morro_rock",    name:"Morro Rock",         note:"Beach break"},
+      {key:"cayucos",       name:"Cayucos Pier",       note:"Beach break · mellow"},
+    ],
+    "Monterey Bay": [
+      {key:"steamer_lane",  name:"Steamer Lane",       note:"Santa Cruz · iconic reef"},
+      {key:"pleasure_pt",   name:"Pleasure Point",     note:"Santa Cruz · reef right"},
+      {key:"cowell",        name:"Cowell's",           note:"Beginner · mellow"},
+      {key:"mavericks",     name:"Mavericks",          note:"Big wave · experts only"},
+      {key:"capitola",      name:"Capitola",           note:"Beach break · mellow"},
+      {key:"pacifica",      name:"Pacifica",           note:"Beach break · windy"},
+    ],
+    "San Francisco": [
+      {key:"ocean_beach_sf",name:"Ocean Beach SF",     note:"Powerful · experts"},
+      {key:"kelly_cove",    name:"Kelly's Cove",       note:"SF · sheltered corner"},
+      {key:"linda_mar",     name:"Linda Mar",          note:"Pacifica · beginner friendly"},
+      {key:"fort_point",    name:"Fort Point",         note:"Under GG bridge · unique"},
+    ],
+    "North Coast": [
+      {key:"bolinas",       name:"Bolinas",            note:"Mellow · remote"},
+      {key:"salmon_creek",  name:"Salmon Creek",       note:"Sonoma · beach break"},
+      {key:"goat_rock",     name:"Goat Rock",          note:"Sonoma · river mouth"},
+      {key:"fort_bragg",    name:"Fort Bragg",         note:"Beach break · cold"},
+    ],
+  },
+  "Oregon": {
+    "South Oregon": [
+      {key:"brookings",     name:"Brookings",          note:"Beach break · consistent"},
+      {key:"gold_beach",    name:"Gold Beach",         note:"Beach break"},
+      {key:"bandon",        name:"Bandon",             note:"Beach break · remote"},
+    ],
+    "Central Oregon": [
+      {key:"florence",      name:"Florence",           note:"Beach break"},
+      {key:"newport_or",    name:"Newport OR",         note:"Agate Beach · consistent"},
+      {key:"lincoln_city",  name:"Lincoln City",       note:"Beach break · consistent"},
+      {key:"neskowin",      name:"Neskowin",           note:"Beach break · mellow"},
+    ],
+    "North Oregon": [
+      {key:"oswald_west",   name:"Oswald West",        note:"Short Sands · sheltered cove"},
+      {key:"cannon_beach",  name:"Cannon Beach",       note:"Scenic · beach break"},
+      {key:"seaside",       name:"Seaside",            note:"Most consistent OR break"},
+      {key:"pacific_city",  name:"Pacific City",       note:"Dory fleet · beach break"},
+    ],
+  },
+  "Washington": {
+    "Southwest Washington": [
+      {key:"westport",      name:"Westport",           note:"Most consistent WA break"},
+      {key:"south_jetty_wa",name:"South Jetty",        note:"Powerful · jetty break"},
+      {key:"long_beach_wa", name:"Long Beach WA",      note:"Beach break · exposed"},
+    ],
+    "Olympic Peninsula": [
+      {key:"moclips",       name:"Moclips",            note:"Beach break · remote"},
+      {key:"la_push",       name:"La Push",            note:"Remote · tribal land"},
+      {key:"shi_shi",       name:"Shi Shi Beach",      note:"Remote · hike in"},
+    ],
+  },
+  "East Coast - Florida": {
+    "Space Coast": [
+      {key:"sebastian_inlet",name:"Sebastian Inlet",   note:"Best FL break · inlet"},
+      {key:"cocoa_beach",    name:"Cocoa Beach",       note:"Consistent · beginner"},
+      {key:"new_smyrna",     name:"New Smyrna Beach",  note:"Sharky · fun waves"},
+      {key:"ponce_inlet",    name:"Ponce Inlet",       note:"Inlet break"},
+    ],
+    "North Florida": [
+      {key:"flagler",        name:"Flagler Beach",     note:"Pier break · consistent"},
+      {key:"jax_beach",      name:"Jacksonville Beach",note:"Beach break"},
+    ],
+  },
+  "East Coast - Mid Atlantic": {
+    "North Carolina": [
+      {key:"cape_hatteras",  name:"Cape Hatteras",     note:"Powerful · storm swell"},
+      {key:"rodanthe",       name:"Rodanthe",          note:"OBX · consistent"},
+      {key:"wrightsville",   name:"Wrightsville Beach",note:"Beach break · consistent"},
+    ],
+    "Virginia / Maryland": [
+      {key:"va_beach",       name:"Virginia Beach",    note:"Beach break · consistent"},
+      {key:"ocean_city_md",  name:"Ocean City MD",     note:"Beach break · storm swell"},
+    ],
+    "New Jersey": [
+      {key:"manasquan",      name:"Manasquan Inlet",   note:"Best NJ break · inlet"},
+      {key:"belmar",         name:"Belmar",            note:"Beach break · consistent"},
+      {key:"asbury_park",    name:"Asbury Park",       note:"Beach break"},
+    ],
+    "New York": [
+      {key:"ditch_plains",   name:"Ditch Plains",      note:"Best NY break · reef"},
+      {key:"montauk",        name:"Montauk",           note:"Multiple breaks"},
+      {key:"long_beach_ny",  name:"Long Beach NY",     note:"Beach break · consistent"},
+      {key:"rockaway",       name:"Rockaway Beach",    note:"NYC surf · beach break"},
+    ],
+  },
+  "East Coast - New England": {
+    "Rhode Island": [
+      {key:"ruggles",        name:"Ruggles",           note:"Reef · localized"},
+      {key:"narragansett",   name:"Narragansett",      note:"Consistent beach break"},
+      {key:"first_beach",    name:"First Beach Newport",note:"Beach break"},
+    ],
+    "Massachusetts / Maine": [
+      {key:"nahant",         name:"Nahant",            note:"MA · reef · exposed"},
+      {key:"good_harbor",    name:"Good Harbor",       note:"MA · beach break"},
+      {key:"ogunquit",       name:"Ogunquit",          note:"ME · beach break · mellow"},
+      {key:"york_beach",     name:"York Beach",        note:"ME · beach break"},
+    ],
+  },
 };
 
-const DEFAULT_KEYS = {
-  CA: new Set(["ob_pier","avalanche","tourm","lj_shores"]),
-  FL: new Set(["flagler_pier","bicentennial","tom_renick","marineland"]),
-};
+const selected = new Set();
+let daysAhead = 1;
+let currentRegionSpots = [];
 
-let currentState = "CA";
-const selected = new Set(DEFAULT_KEYS["CA"]);
+// Populate state dropdown
+const stateSelect = document.getElementById("sel-state");
+Object.keys(SPOTS_DB).forEach(state => {
+  const opt = document.createElement("option");
+  opt.value = state;
+  opt.textContent = state;
+  stateSelect.appendChild(opt);
+});
 
-function selectState(state) {
-  currentState = state;
-  document.querySelectorAll(".state-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("state-" + state).classList.add("active");
-  selected.clear();
-  DEFAULT_KEYS[state].forEach(k => selected.add(k));
-  renderSpots();
+function onStateChange() {
+  const state = stateSelect.value;
+  const regionSelect = document.getElementById("sel-region");
+  regionSelect.innerHTML = '<option value="">Region</option>';
+  regionSelect.disabled = !state;
+  if (state) {
+    Object.keys(SPOTS_DB[state]).forEach(region => {
+      const opt = document.createElement("option");
+      opt.value = region;
+      opt.textContent = region;
+      regionSelect.appendChild(opt);
+    });
+  }
+  clearAll();
+  document.getElementById("spot-sections").innerHTML = '<div class="empty-state">Select a region above to see spots</div>';
+  currentRegionSpots = [];
 }
 
-function renderSpots() {
+function onRegionChange() {
+  const state = stateSelect.value;
+  const region = document.getElementById("sel-region").value;
+  if (!state || !region) return;
+  currentRegionSpots = SPOTS_DB[state][region];
+  renderSpots(currentRegionSpots);
+  clearAll();
+}
+
+function renderSpots(spots) {
   const container = document.getElementById("spot-sections");
   container.innerHTML = "";
-  ZONES[currentState].forEach(zone => {
-    const zl = document.createElement("div");
-    zl.className = "zone-label";
-    zl.textContent = zone.label;
-    container.appendChild(zl);
-    const grid = document.createElement("div");
-    grid.className = "spot-grid";
-    zone.spots.forEach(s => {
-      const el = document.createElement("div");
-      el.className = "spot-chip" + (selected.has(s.key) ? " selected" : "");
-      el.id = "chip-" + s.key;
-      el.innerHTML = `<div class="spot-chip-name">${s.name}</div><div class="spot-chip-note">${s.note}</div>`;
-      el.onclick = () => {
-        selected.has(s.key) ? selected.delete(s.key) : selected.add(s.key);
-        el.classList.toggle("selected", selected.has(s.key));
-        updateCount();
-      };
-      grid.appendChild(el);
-    });
-    container.appendChild(grid);
+  const grid = document.createElement("div");
+  grid.className = "spot-grid";
+  spots.forEach(s => {
+    const el = document.createElement("div");
+    el.className = "spot-chip" + (selected.has(s.key) ? " selected" : "");
+    el.id = "chip-" + s.key;
+    el.innerHTML = `<div class="spot-chip-name">${s.name}</div><div class="spot-chip-note">${s.note}</div>`;
+    el.onclick = () => {
+      selected.has(s.key) ? selected.delete(s.key) : selected.add(s.key);
+      el.classList.toggle("selected", selected.has(s.key));
+      updateCount();
+    };
+    grid.appendChild(el);
   });
+  container.appendChild(grid);
   updateCount();
 }
 
@@ -272,10 +340,10 @@ function updateCount() {
   document.getElementById("count-pill").textContent = selected.size + " selected";
 }
 function selectAll() {
-  ZONES[currentState].forEach(z => z.spots.forEach(s => {
+  currentRegionSpots.forEach(s => {
     selected.add(s.key);
     document.getElementById("chip-"+s.key)?.classList.add("selected");
-  }));
+  });
   updateCount();
 }
 function clearAll() {
@@ -283,108 +351,63 @@ function clearAll() {
   document.querySelectorAll(".spot-chip").forEach(el => el.classList.remove("selected"));
   updateCount();
 }
-function selectDefaults() {
-  selected.clear();
-  document.querySelectorAll(".spot-chip").forEach(el => el.classList.remove("selected"));
-  DEFAULT_KEYS[currentState].forEach(k => {
-    selected.add(k);
-    document.getElementById("chip-"+k)?.classList.add("selected");
-  });
-  updateCount();
+function selectDay(btn) {
+  document.querySelectorAll(".day-btn").forEach(b => b.classList.remove("selected"));
+  btn.classList.add("selected");
+  daysAhead = parseInt(btn.dataset.days);
 }
 
-// DateTime helpers
-function pad(n) { return String(n).padStart(2, "0"); }
-function toLocalISO(d) {
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function setNow() {
-  const now = new Date();
-  document.getElementById("session-time").value = toLocalISO(now);
-  updateWindowNote();
-}
-function updateWindowNote() {
-  const val = document.getElementById("session-time").value;
-  if (!val) { document.getElementById("window-note").textContent = ""; return; }
-  const dt = new Date(val);
-  const end = new Date(dt.getTime() + 3 * 60 * 60 * 1000);
-  const fmt = d => d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
-  document.getElementById("window-note").textContent =
-    "Forecast window: " + fmt(dt) + " – " + fmt(end);
-}
-
-// Default: tomorrow at 6am
-function initDateTime() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(6, 0, 0, 0);
-  document.getElementById("session-time").value = toLocalISO(d);
-  updateWindowNote();
-}
-
-document.getElementById("session-time").addEventListener("change", updateWindowNote);
-
-function setLoading(loading, statusText) {
+function setLoading(loading, statusText, isNow) {
   const btn = document.getElementById("go-btn");
+  const nowBtn = document.getElementById("now-btn");
   const row = document.getElementById("status-row");
   if (loading) {
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Fetching forecast…';
+    btn.disabled = true; nowBtn.disabled = true;
+    if (isNow) { nowBtn.textContent = "⚡ Fetching…"; }
+    else { btn.innerHTML = '<span class="spinner"></span>Fetching forecast…'; }
     row.style.display = "flex";
-    document.getElementById("status-text").textContent = statusText || "Fetching wave data…";
+    document.getElementById("status-text").textContent = statusText;
     document.getElementById("error").style.display = "none";
     document.getElementById("result-card").style.display = "none";
   } else {
-    btn.disabled = false;
+    btn.disabled = false; nowBtn.disabled = false;
     btn.textContent = "Get forecast";
+    nowBtn.textContent = "⚡ Right Now";
     row.style.display = "none";
   }
 }
 
 function formatResult(text) {
   return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/★/g, '<span class="stars">★</span>')
     .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
 }
 
-async function getForecast() {
+async function doFetch(nowMode) {
   if (selected.size === 0) {
     document.getElementById("error").style.display = "block";
     document.getElementById("error").textContent = "Select at least one spot.";
     return;
   }
-  const targetDatetime = document.getElementById("session-time").value;
-  if (!targetDatetime) {
-    document.getElementById("error").style.display = "block";
-    document.getElementById("error").textContent = "Pick a date and time.";
-    return;
-  }
-
-  setLoading(true, "Fetching wave data for " + selected.size + " spots…");
-
+  setLoading(true, "Fetching wave data for " + selected.size + " spot(s)…", nowMode);
   try {
+    const body = nowMode
+      ? { spots: [...selected], now: true }
+      : { spots: [...selected], days_ahead: daysAhead };
     const res = await fetch("/api/forecast", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        spots: [...selected],
-        state: currentState,
-        target_datetime: targetDatetime,
-        feedback: loadFeedback(currentState),
-      })
+      body: JSON.stringify(body)
     });
-
     document.getElementById("status-text").textContent = "Claude is analyzing conditions…";
-
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Server error");
-
     setLoading(false);
     const card = document.getElementById("result-card");
     document.getElementById("result-text").innerHTML = formatResult(data.result);
     card.style.display = "block";
     card.scrollIntoView({ behavior: "smooth", block: "start" });
-    showFeedbackCard();
   } catch(e) {
     setLoading(false);
     document.getElementById("error").style.display = "block";
@@ -392,74 +415,8 @@ async function getForecast() {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Feedback
-// ---------------------------------------------------------------------------
-const FEEDBACK_KEY = "surf-agent-feedback";
-const MAX_FEEDBACK = 5;
-
-function loadFeedback(state) {
-  try {
-    const data = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "{}");
-    return data[state] || [];
-  } catch { return []; }
-}
-
-function saveFeedback(state, entries) {
-  try {
-    const data = JSON.parse(localStorage.getItem(FEEDBACK_KEY) || "{}");
-    data[state] = entries;
-    localStorage.setItem(FEEDBACK_KEY, JSON.stringify(data));
-  } catch {}
-}
-
-function showFeedbackCard() {
-  const card = document.getElementById("feedback-card");
-  document.getElementById("feedback-text").value = "";
-  document.getElementById("feedback-saved").style.display = "none";
-  card.style.display = "block";
-  renderPastFeedback();
-}
-
-function renderPastFeedback() {
-  const entries = loadFeedback(currentState);
-  const section = document.getElementById("past-feedback-section");
-  if (entries.length === 0) { section.style.display = "none"; return; }
-  section.style.display = "block";
-  document.getElementById("past-feedback-state").textContent = currentState === "CA" ? "California" : "Florida";
-  const list = document.getElementById("past-feedback-list");
-  list.innerHTML = entries.slice().reverse().map(e =>
-    `<div class="past-feedback-item">${e.replace(/</g,"&lt;")}</div>`
-  ).join("");
-}
-
-function submitFeedback() {
-  const text = document.getElementById("feedback-text").value.trim();
-  if (!text) return;
-
-  // Prepend date/time context automatically
-  const timeVal = document.getElementById("session-time").value;
-  const label   = timeVal ? new Date(timeVal).toLocaleString([], {dateStyle:"medium", timeStyle:"short"}) : "";
-  const entry   = (label ? `[${label}] ` : "") + text;
-
-  const entries = loadFeedback(currentState);
-  entries.push(entry);
-  if (entries.length > MAX_FEEDBACK) entries.splice(0, entries.length - MAX_FEEDBACK);
-  saveFeedback(currentState, entries);
-
-  document.getElementById("feedback-text").value = "";
-  document.getElementById("feedback-saved").style.display = "block";
-  setTimeout(() => { document.getElementById("feedback-saved").style.display = "none"; }, 3000);
-  renderPastFeedback();
-}
-
-function clearFeedback() {
-  saveFeedback(currentState, []);
-  renderPastFeedback();
-}
-
-renderSpots();
-initDateTime();
+function getForecast() { doFetch(false); }
+function getForecastNow() { doFetch(true); }
 </script>
 </body>
 </html>
