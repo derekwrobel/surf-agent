@@ -61,6 +61,7 @@ def get_window(target_date):
         return "evening"
     return "dawn"  # For future days always forecast dawn
 
+@app.route("/", methods=["GET", "POST"])
 @app.route("/api/cron", methods=["GET", "POST"])
 def run_cron():
     # Verify this is called by Vercel's cron (not a random user)
