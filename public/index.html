@@ -9,63 +9,51 @@
 <title>Surf Agent</title>
 <style>
   :root {
-    --green: #1D9E75; --green-light: #E1F5EE; --green-dark: #0F6E56;
-    --text: #1a1a1a; --text-secondary: #6b7280; --text-tertiary: #9ca3af;
-    --border: rgba(0,0,0,0.1); --bg: #f9f9f8; --card: #ffffff; --radius: 12px;
+    --green:#1D9E75;--green-light:#E1F5EE;--green-dark:#0F6E56;
+    --text:#1a1a1a;--text-secondary:#6b7280;--text-tertiary:#9ca3af;
+    --border:rgba(0,0,0,0.1);--bg:#f9f9f8;--card:#ffffff;--radius:12px;
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --text: #f0f0ee; --text-secondary: #9ca3af; --border: rgba(255,255,255,0.1); --bg: #111110; --card: #1c1c1a; --green-light: #0a2e22; }
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  header { padding: 52px 20px 16px; background: var(--card); border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; }
-  header h1 { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  header p { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
-  .content { padding: 16px 16px 100px; max-width: 600px; margin: 0 auto; }
-  .section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin: 20px 0 8px; }
-  .section-label:first-of-type { margin-top: 8px; }
-
-  /* Location selector */
-  .select-row { display: flex; gap: 8px; margin-bottom: 8px; }
-  .loc-select { flex: 1; font-size: 14px; padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); outline: none; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
-  .loc-select:disabled { opacity: 0.4; }
-
-  /* Spot chips */
-  .zone-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); letter-spacing: 0.05em; text-transform: uppercase; margin: 14px 0 6px; }
-  .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 4px; }
-  .spot-chip { padding: 10px 12px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); cursor: pointer; user-select: none; }
-  .spot-chip.selected { border: 1.5px solid var(--green); background: var(--green-light); }
-  .spot-chip-name { font-size: 12px; font-weight: 500; color: var(--text); }
-  .spot-chip.selected .spot-chip-name { color: var(--green-dark); }
-  .spot-chip-note { font-size: 10px; color: var(--text-tertiary); margin-top: 1px; line-height: 1.3; }
-  .spot-chip.selected .spot-chip-note { color: var(--green); }
-  .quick-btns { display: flex; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-  .quick-btn { font-size: 12px; padding: 6px 12px; border: 0.5px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text-secondary); cursor: pointer; }
-  .count-pill { font-size: 11px; padding: 2px 8px; background: var(--green-light); color: var(--green-dark); border-radius: 20px; margin-left: 6px; font-weight: 500; }
-
-  /* When selector */
-  .now-btn { width: 100%; padding: 13px; background: transparent; color: var(--green); border: 1.5px solid var(--green); border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
-  .now-btn:active { opacity: 0.7; }
-  .now-btn:disabled { opacity: 0.4; }
-  .day-selector { display: flex; gap: 8px; }
-  .day-btn { flex: 1; padding: 10px; border: 0.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; text-align: center; }
-  .day-btn.selected { border: 1.5px solid var(--green); background: var(--green-light); color: var(--green-dark); font-weight: 500; }
-  .go-btn { width: 100%; padding: 16px; background: var(--green); color: white; border: none; border-radius: var(--radius); font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 8px; }
-  .go-btn:active { opacity: 0.85; }
-  .go-btn:disabled { opacity: 0.4; }
-
-  /* Output */
-  .result-card { background: var(--card); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 20px; }
-  .result-text { font-size: 14px; line-height: 1.75; white-space: pre-wrap; color: var(--text); }
-  .result-text .stars { color: #f59e0b; }
-  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: -3px; margin-right: 8px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .status-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 1s infinite; flex-shrink: 0; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .error { color: #dc2626; font-size: 13px; margin-top: 12px; padding: 12px; background: #fef2f2; border-radius: 10px; }
-  @media (prefers-color-scheme: dark) { .error { background: #2a1010; color: #f87171; } }
-  .empty-state { text-align: center; padding: 24px 16px; color: var(--text-tertiary); font-size: 13px; }
+  @media(prefers-color-scheme:dark){:root{--text:#f0f0ee;--text-secondary:#9ca3af;--border:rgba(255,255,255,0.1);--bg:#111110;--card:#1c1c1a;--green-light:#0a2e22;}}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+  header{padding:52px 20px 16px;background:var(--card);border-bottom:0.5px solid var(--border);position:sticky;top:0;z-index:10;}
+  header h1{font-size:20px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  header p{font-size:13px;color:var(--text-secondary);margin-top:2px;}
+  .content{padding:16px 16px 100px;max-width:600px;margin:0 auto;}
+  .section-label{font-size:11px;font-weight:600;color:var(--text-secondary);letter-spacing:.06em;text-transform:uppercase;margin:20px 0 8px;}
+  .section-label:first-of-type{margin-top:8px;}
+  .select-row{display:flex;gap:8px;margin-bottom:8px;}
+  .loc-select{flex:1;font-size:14px;padding:10px 12px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+  .loc-select:disabled{opacity:0.4;}
+  .zone-label{font-size:11px;font-weight:600;color:var(--text-tertiary);letter-spacing:.05em;text-transform:uppercase;margin:14px 0 6px;}
+  .spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:4px;}
+  .spot-chip{padding:10px 12px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;user-select:none;}
+  .spot-chip.selected{border:1.5px solid var(--green);background:var(--green-light);}
+  .spot-chip-name{font-size:12px;font-weight:500;color:var(--text);}
+  .spot-chip.selected .spot-chip-name{color:var(--green-dark);}
+  .spot-chip-note{font-size:10px;color:var(--text-tertiary);margin-top:1px;line-height:1.3;}
+  .spot-chip.selected .spot-chip-note{color:var(--green);}
+  .quick-btns{display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
+  .quick-btn{font-size:12px;padding:6px 12px;border:0.5px solid var(--border);border-radius:20px;background:var(--card);color:var(--text-secondary);cursor:pointer;}
+  .count-pill{font-size:11px;padding:2px 8px;background:var(--green-light);color:var(--green-dark);border-radius:20px;margin-left:6px;font-weight:500;}
+  .now-btn{width:100%;padding:13px;background:transparent;color:var(--green);border:1.5px solid var(--green);border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;}
+  .now-btn:active{opacity:.7;} .now-btn:disabled{opacity:.4;}
+  .day-selector{display:flex;gap:8px;}
+  .day-btn{flex:1;padding:10px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;text-align:center;}
+  .day-btn.selected{border:1.5px solid var(--green);background:var(--green-light);color:var(--green-dark);font-weight:500;}
+  .go-btn{width:100%;padding:16px;background:var(--green);color:white;border:none;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;margin-top:8px;}
+  .go-btn:active{opacity:.85;} .go-btn:disabled{opacity:.4;}
+  .result-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:20px;}
+  .result-text{font-size:14px;line-height:1.75;white-space:pre-wrap;color:var(--text);}
+  .result-text .stars{color:#f59e0b;}
+  .spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:8px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .status-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-secondary);margin-top:12px;}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1s infinite;flex-shrink:0;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .error{color:#dc2626;font-size:13px;margin-top:12px;padding:12px;background:#fef2f2;border-radius:10px;}
+  @media(prefers-color-scheme:dark){.error{background:#2a1010;color:#f87171;}}
+  .empty-state{text-align:center;padding:24px 16px;color:var(--text-tertiary);font-size:13px;}
 </style>
 </head>
 <body>
@@ -73,19 +61,12 @@
   <h1><span>🌊</span> Surf Agent</h1>
   <p>Dawn patrol forecast · Open-Meteo + NOAA + Claude</p>
 </header>
-
 <div class="content">
-
   <div class="section-label">Location</div>
   <div class="select-row">
-    <select class="loc-select" id="sel-state" onchange="onStateChange()">
-      <option value="">State / Coast</option>
-    </select>
-    <select class="loc-select" id="sel-region" onchange="onRegionChange()" disabled>
-      <option value="">Region</option>
-    </select>
+    <select class="loc-select" id="sel-state" onchange="onStateChange()"><option value="">State / Region</option></select>
+    <select class="loc-select" id="sel-region" onchange="onRegionChange()" disabled><option value="">Sub-region</option></select>
   </div>
-
   <div style="display:flex;align-items:center;margin-top:16px;margin-bottom:6px;">
     <div class="section-label" style="margin:0;">Spots</div>
     <span class="count-pill" id="count-pill">0 selected</span>
@@ -95,7 +76,6 @@
     <button class="quick-btn" onclick="clearAll()">None</button>
   </div>
   <div id="spot-sections"><div class="empty-state">Select a region above to see spots</div></div>
-
   <div class="section-label">When</div>
   <button class="now-btn" id="now-btn" onclick="getForecastNow()">⚡ Right Now</button>
   <div class="day-selector">
@@ -104,205 +84,444 @@
     <button class="day-btn" data-days="3" onclick="selectDay(this)">In 3 days</button>
   </div>
   <button class="go-btn" id="go-btn" onclick="getForecast()">Get forecast</button>
-
-  <div id="status-row" style="display:none;" class="status-row">
-    <div class="dot"></div>
-    <span id="status-text">Fetching wave data…</span>
-  </div>
+  <div id="status-row" style="display:none;" class="status-row"><div class="dot"></div><span id="status-text">Fetching wave data…</span></div>
   <div id="error" style="display:none;" class="error"></div>
-  <div id="result-card" style="display:none;" class="result-card">
-    <div class="result-text" id="result-text"></div>
-  </div>
+  <div id="result-card" style="display:none;" class="result-card"><div class="result-text" id="result-text"></div></div>
 </div>
-
 <script>
 const SPOTS_DB = {
   "California": {
-    "San Diego": [
-      {key:"sunset_cliffs", name:"Sunset Cliffs",      note:"Reef · W/SW swell"},
-      {key:"ob_pier",       name:"OB Pier",            note:"Home base"},
-      {key:"ob_jetty",      name:"OB Jetty",           note:"N jetty · hollow peaks"},
-      {key:"avalanche",     name:"Avalanche",          note:"SW/W swell 197-307°"},
-      {key:"mission",       name:"Mission Beach",      note:"Beach break"},
-      {key:"pb_dr",         name:"PB Dr.",             note:"Beach break"},
-      {key:"crystal",       name:"Crystal Pier",       note:"PB pier break"},
-      {key:"tourm",         name:"Tourmaline",         note:"Longboard friendly"},
-      {key:"lj_shores",     name:"La Jolla Shores",    note:"Protected south wind"},
-      {key:"blacks",        name:"Blacks Beach",       note:"Uncrowded · hike in"},
-      {key:"scripps",       name:"Scripps Pier",       note:"N La Jolla"},
-      {key:"delmar_15",     name:"Del Mar 15th St",    note:"Town beach break"},
-      {key:"delmar_river",  name:"Del Mar Rivermouth", note:"Shifting sandbars"},
-      {key:"delmar_29",     name:"Del Mar 29th St",    note:"N Del Mar peaks"},
-      {key:"cardiff",       name:"Cardiff",            note:"Reef · long rides"},
-      {key:"swamis",        name:"Swami's",            note:"Reef · best W swell"},
-      {key:"grandview",     name:"Grandview",          note:"Reef · consistent"},
+    "San Diego - South": [
+      {key:"tijuana_sloughs",  name:"Tijuana Sloughs",    note:"S swell magnet · remote"},
+      {key:"imperial_beach",   name:"Imperial Beach Pier",note:"Beach break · S swell"},
+      {key:"silver_strand",    name:"Silver Strand",      note:"Beach break · sheltered"},
+      {key:"coronado",         name:"Coronado Beach",     note:"Beach break · mellow"},
+      {key:"sunset_cliffs_ab", name:"Sunset Cliffs (Ab)", note:"Reef · expert · tidal"},
+      {key:"sunset_cliffs",    name:"Sunset Cliffs",      note:"Reef · W/SW swell"},
+    ],
+    "San Diego - OB / PB": [
+      {key:"ob_pier",          name:"OB Pier",            note:"Home base"},
+      {key:"ob_jetty",         name:"OB Jetty",           note:"N jetty · hollow peaks"},
+      {key:"avalanche",        name:"Avalanche",          note:"SW/W swell 197-307°"},
+      {key:"south_mission",    name:"South Mission",      note:"Beach break"},
+      {key:"mission",          name:"Mission Beach",      note:"Beach break"},
+      {key:"pb_dr",            name:"PB Dr.",             note:"Beach break"},
+      {key:"crystal",          name:"Crystal Pier",       note:"PB pier break"},
+      {key:"tourm",            name:"Tourmaline",         note:"Longboard friendly"},
+      {key:"pb_point",         name:"PB Point",           note:"Reef · consistent"},
+    ],
+    "San Diego - La Jolla": [
+      {key:"bird_rock",        name:"Bird Rock",          note:"Reef · S/SW swell"},
+      {key:"windansea",        name:"Windansea",          note:"Reef · localized"},
+      {key:"big_rock",         name:"Big Rock",           note:"Heavy left · experts"},
+      {key:"horseshoes",       name:"Horseshoes",         note:"Hollow reef · experts"},
+      {key:"hospitals",        name:"Hospitals",          note:"Reef · N swell · winter"},
+      {key:"lj_shores",        name:"La Jolla Shores",    note:"Protected south wind"},
+      {key:"blacks",           name:"Blacks Beach",       note:"Uncrowded · hike in"},
+      {key:"scripps",          name:"Scripps Pier",       note:"N La Jolla"},
+      {key:"torrey_pines",     name:"Torrey Pines",       note:"Beach break · uncrowded"},
+    ],
+    "San Diego - Del Mar / Solana": [
+      {key:"fletcher_cove",    name:"Fletcher Cove",      note:"Solana Beach · reef"},
+      {key:"tide_beach",       name:"Tide Beach Park",    note:"Solana Beach · beach"},
+      {key:"del_mar_dog",      name:"Del Mar Dog Beach",  note:"Rivermouth · shifting banks"},
+      {key:"delmar_15",        name:"Del Mar 15th St",    note:"Town beach break"},
+      {key:"delmar_river",     name:"Del Mar Rivermouth", note:"Sandbars · S/SW swell"},
+      {key:"delmar_29",        name:"Del Mar 29th St",    note:"N Del Mar peaks"},
+    ],
+    "San Diego - Encinitas / Cardiff": [
+      {key:"seaside_reef",     name:"Seaside Reef",       note:"Reef · SW swell · aerials"},
+      {key:"table_tops",       name:"Table Tops",         note:"Reef · consistent"},
+      {key:"cardiff",          name:"Cardiff Reef",       note:"Reef · long rides"},
+      {key:"san_elijo",        name:"San Elijo",          note:"State beach · beginner ok"},
+      {key:"pipes",            name:"Pipes",              note:"Left · consistent"},
+      {key:"swamis",           name:"Swami's",            note:"Right point · W swell"},
+      {key:"d_street",         name:"D Street",           note:"Beach break · fun"},
+      {key:"moonlight",        name:"Moonlight Beach",    note:"Beach break · beginner ok"},
+      {key:"stone_steps",      name:"Stone Steps",        note:"Reef · consistent"},
+      {key:"beacons",          name:"Beacons",            note:"Leucadia · reef/beach"},
+      {key:"grandview",        name:"Grandview",          note:"Reef · less crowded"},
+    ],
+    "San Diego - Carlsbad / Oceanside": [
+      {key:"south_ponto",      name:"South Ponto",        note:"Beach break · jetty assist"},
+      {key:"ponto",            name:"Ponto",              note:"Jetty · sandbar factory"},
+      {key:"tamarack",         name:"Tamarack Beach",     note:"Carlsbad · beach break"},
+      {key:"warm_water_jetty", name:"Warm Water Jetty",   note:"Carlsbad · jetty break"},
+      {key:"carlsbad_state",   name:"Carlsbad State Beach",note:"Beach break"},
+      {key:"oceanside_pier",   name:"Oceanside Pier",     note:"Pier break · consistent"},
+      {key:"oceanside_harbor", name:"Oceanside Harbor",   note:"Jetty · hollow peaks"},
+      {key:"san_luis_rey",     name:"San Luis Rey",       note:"Rivermouth · S swell"},
     ],
     "Orange County": [
-      {key:"trestles",      name:"Trestles",           note:"World class · multiple breaks"},
-      {key:"lowers",        name:"Lowers",             note:"CT contest site"},
-      {key:"san_onofre",    name:"San Onofre",         note:"Longboard mecca"},
-      {key:"doheny",        name:"Doheny",             note:"Beginner friendly"},
-      {key:"salt_creek",    name:"Salt Creek",         note:"Powerful beach break"},
-      {key:"brooks_street", name:"Brooks Street",      note:"Laguna · reef"},
-      {key:"thalia",        name:"Thalia Street",      note:"Laguna · consistent"},
-      {key:"huntington",    name:"Huntington Beach",   note:"Surf City USA"},
-      {key:"newps_pier",    name:"Newport Pier",       note:"Classic beach break"},
-      {key:"the_wedge",     name:"The Wedge",          note:"Bodysurf · huge shore break"},
+      {key:"trestles",         name:"Trestles",           note:"World class · multiple breaks"},
+      {key:"lowers",           name:"Lowers",             note:"CT contest site · 2028 Olympics"},
+      {key:"uppers",           name:"Uppers",             note:"Trestles · right hander"},
+      {key:"cottons",          name:"Cottons",            note:"Trestles · less crowded"},
+      {key:"san_onofre",       name:"San Onofre",         note:"Longboard mecca"},
+      {key:"trail1",           name:"Trail 1",            note:"San O · consistent"},
+      {key:"doheny",           name:"Doheny",             note:"Beginner friendly"},
+      {key:"salt_creek",       name:"Salt Creek",         note:"Powerful beach break"},
+      {key:"brooks_street",    name:"Brooks Street",      note:"Laguna · reef"},
+      {key:"thalia",           name:"Thalia Street",      note:"Laguna · consistent"},
+      {key:"huntington",       name:"Huntington Beach",   note:"Surf City USA"},
+      {key:"newps_pier",       name:"Newport Pier",       note:"Classic beach break"},
+      {key:"the_wedge",        name:"The Wedge",          note:"Bodysurf · massive shore break"},
+      {key:"54th_st",          name:"54th Street",        note:"Newport · reef"},
     ],
     "Los Angeles": [
-      {key:"malibu",        name:"Malibu First Point", note:"Iconic longboard wave"},
-      {key:"zuma",          name:"Zuma Beach",         note:"Beach break · consistent"},
-      {key:"el_porto",      name:"El Porto",           note:"Manhattan Beach · powerful"},
-      {key:"manhattan_pier",name:"Manhattan Pier",     note:"Beach break"},
-      {key:"hermosa",       name:"Hermosa Beach",      note:"Beach break"},
-      {key:"venice",        name:"Venice Beach",       note:"Beach break"},
-      {key:"topanga",       name:"Topanga",            note:"Beach break · consistent"},
-      {key:"county_line",   name:"County Line",        note:"Ventura/LA border"},
+      {key:"malibu",           name:"Malibu First Point", note:"Iconic longboard right"},
+      {key:"sunset_pt",        name:"Sunset Point",       note:"Malibu · long rights"},
+      {key:"zuma",             name:"Zuma Beach",         note:"Beach break · consistent"},
+      {key:"county_line",      name:"County Line",        note:"Ventura/LA border"},
+      {key:"topanga",          name:"Topanga",            note:"Beach break · consistent"},
+      {key:"venice",           name:"Venice Beach",       note:"Beach break"},
+      {key:"el_porto",         name:"El Porto",           note:"Manhattan Beach · powerful"},
+      {key:"manhattan_pier",   name:"Manhattan Pier",     note:"Beach break"},
+      {key:"hermosa",          name:"Hermosa Beach",      note:"Beach break"},
+      {key:"redondo",          name:"Redondo Beach",      note:"Beach break"},
+      {key:"palos_verdes",     name:"Palos Verdes",       note:"Reef · localized"},
     ],
     "Ventura / Santa Barbara": [
-      {key:"rincon",        name:"Rincon",             note:"Queen of the Coast"},
-      {key:"c_street",      name:"C Street",           note:"Long point break"},
-      {key:"emma_wood",     name:"Emma Wood",          note:"Beach break · consistent"},
-      {key:"ventura_pier",  name:"Ventura Pier",       note:"Beach break"},
-      {key:"hammonds",      name:"Hammonds",           note:"Reef · right point"},
-      {key:"leadbetter",    name:"Leadbetter",         note:"SB · longboard"},
-      {key:"campus_pt",     name:"Campus Point",       note:"UCSB · reef right"},
+      {key:"rincon",           name:"Rincon",             note:"Queen of the Coast"},
+      {key:"c_street",         name:"C Street",           note:"Long right point"},
+      {key:"emma_wood",        name:"Emma Wood",          note:"Beach break · consistent"},
+      {key:"ventura_pier",     name:"Ventura Pier",       note:"Beach break"},
+      {key:"hammonds",         name:"Hammonds",           note:"Reef · right point"},
+      {key:"leadbetter",       name:"Leadbetter",         note:"SB · longboard"},
+      {key:"campus_pt",        name:"Campus Point",       note:"UCSB · reef right"},
+      {key:"sandyland",        name:"Sandyland",          note:"Carpinteria · beach break"},
     ],
     "Central Coast": [
-      {key:"pismo",         name:"Pismo Beach",        note:"Beach break"},
-      {key:"shell_beach",   name:"Shell Beach",        note:"Reef · consistent"},
-      {key:"morro_rock",    name:"Morro Rock",         note:"Beach break"},
-      {key:"cayucos",       name:"Cayucos Pier",       note:"Beach break · mellow"},
+      {key:"pismo",            name:"Pismo Beach",        note:"Beach break"},
+      {key:"shell_beach",      name:"Shell Beach",        note:"Reef · consistent"},
+      {key:"morro_rock",       name:"Morro Rock",         note:"Beach break"},
+      {key:"cayucos",          name:"Cayucos Pier",       note:"Beach break · mellow"},
+      {key:"moonstone",        name:"Moonstone Beach",    note:"Cambria · beach break"},
     ],
     "Monterey Bay": [
-      {key:"steamer_lane",  name:"Steamer Lane",       note:"Santa Cruz · iconic reef"},
-      {key:"pleasure_pt",   name:"Pleasure Point",     note:"Santa Cruz · reef right"},
-      {key:"cowell",        name:"Cowell's",           note:"Beginner · mellow"},
-      {key:"mavericks",     name:"Mavericks",          note:"Big wave · experts only"},
-      {key:"capitola",      name:"Capitola",           note:"Beach break · mellow"},
-      {key:"pacifica",      name:"Pacifica",           note:"Beach break · windy"},
+      {key:"steamer_lane",     name:"Steamer Lane",       note:"Santa Cruz · iconic reef"},
+      {key:"pleasure_pt",      name:"Pleasure Point",     note:"Santa Cruz · reef right"},
+      {key:"cowell",           name:"Cowell's",           note:"Beginner · mellow"},
+      {key:"26th_ave",         name:"26th Ave",           note:"SC · beach break"},
+      {key:"capitola",         name:"Capitola",           note:"Beach break · mellow"},
+      {key:"manresa",          name:"Manresa",            note:"Beach break · consistent"},
+      {key:"mavericks",        name:"Mavericks",          note:"Big wave · experts only"},
+      {key:"pacifica",         name:"Pacifica",           note:"Beach break · windy"},
     ],
     "San Francisco": [
-      {key:"ocean_beach_sf",name:"Ocean Beach SF",     note:"Powerful · experts"},
-      {key:"kelly_cove",    name:"Kelly's Cove",       note:"SF · sheltered corner"},
-      {key:"linda_mar",     name:"Linda Mar",          note:"Pacifica · beginner friendly"},
-      {key:"fort_point",    name:"Fort Point",         note:"Under GG bridge · unique"},
+      {key:"ocean_beach_sf",   name:"Ocean Beach SF",     note:"Powerful · experts"},
+      {key:"kelly_cove",       name:"Kelly's Cove",       note:"SF · sheltered corner"},
+      {key:"linda_mar",        name:"Linda Mar",          note:"Pacifica · beginner ok"},
+      {key:"fort_point",       name:"Fort Point",         note:"Under GG bridge · unique"},
     ],
-    "North Coast": [
-      {key:"bolinas",       name:"Bolinas",            note:"Mellow · remote"},
-      {key:"salmon_creek",  name:"Salmon Creek",       note:"Sonoma · beach break"},
-      {key:"goat_rock",     name:"Goat Rock",          note:"Sonoma · river mouth"},
-      {key:"fort_bragg",    name:"Fort Bragg",         note:"Beach break · cold"},
+    "North Coast CA": [
+      {key:"bolinas",          name:"Bolinas",            note:"Mellow · remote"},
+      {key:"salmon_creek",     name:"Salmon Creek",       note:"Sonoma · beach break"},
+      {key:"goat_rock",        name:"Goat Rock",          note:"Sonoma · river mouth"},
+      {key:"fort_bragg",       name:"Fort Bragg",         note:"Beach break · cold"},
+      {key:"shelter_cove",     name:"Shelter Cove",       note:"Remote · reef · cold"},
     ],
   },
   "Oregon": {
     "South Oregon": [
-      {key:"brookings",     name:"Brookings",          note:"Beach break · consistent"},
-      {key:"gold_beach",    name:"Gold Beach",         note:"Beach break"},
-      {key:"bandon",        name:"Bandon",             note:"Beach break · remote"},
+      {key:"brookings",        name:"Brookings",          note:"Beach break · consistent"},
+      {key:"gold_beach",       name:"Gold Beach",         note:"Rivermouth · beach break"},
+      {key:"bandon",           name:"Bandon",             note:"Beach break · remote"},
+      {key:"bastendorff",      name:"Bastendorff Beach",  note:"Coos Bay · offshore S wind"},
+      {key:"winchester_bay",   name:"Winchester Bay",     note:"S Umpqua jetty · beach break"},
     ],
     "Central Oregon": [
-      {key:"florence",      name:"Florence",           note:"Beach break"},
-      {key:"newport_or",    name:"Newport OR",         note:"Agate Beach · consistent"},
-      {key:"lincoln_city",  name:"Lincoln City",       note:"Beach break · consistent"},
-      {key:"neskowin",      name:"Neskowin",           note:"Beach break · mellow"},
+      {key:"florence",         name:"Florence Jetties",   note:"Beach break · jetties"},
+      {key:"waldport",         name:"Waldport",           note:"Beach break · remote"},
+      {key:"newport_or",       name:"Newport / Agate",    note:"Consistent · beach break"},
+      {key:"boiler_bay",       name:"Boiler Bay",         note:"Reef · scenic · inconsistent"},
+      {key:"otter_rock",       name:"Otter Rock",         note:"Sheltered · beginner ok"},
+      {key:"lincoln_city",     name:"Lincoln City",       note:"Beach break · consistent"},
+      {key:"nelscott",         name:"Nelscott Reef",      note:"Big wave · tow-in · experts"},
+      {key:"neskowin",         name:"Neskowin",           note:"Beach break · mellow"},
     ],
     "North Oregon": [
-      {key:"oswald_west",   name:"Oswald West",        note:"Short Sands · sheltered cove"},
-      {key:"cannon_beach",  name:"Cannon Beach",       note:"Scenic · beach break"},
-      {key:"seaside",       name:"Seaside",            note:"Most consistent OR break"},
-      {key:"pacific_city",  name:"Pacific City",       note:"Dory fleet · beach break"},
+      {key:"pacific_city",     name:"Pacific City",       note:"Dory fleet · beach break"},
+      {key:"tillamook",        name:"Tillamook Bay",      note:"Rivermouth · beach break"},
+      {key:"oswald_west",      name:"Oswald West",        note:"Short Sands · sheltered cove"},
+      {key:"cannon_beach",     name:"Cannon Beach",       note:"Scenic · beach break · beginner"},
+      {key:"seaside",          name:"Seaside",            note:"Most consistent OR · localized"},
+      {key:"gearhart",         name:"Gearhart",           note:"Beach break · uncrowded"},
+      {key:"astoria",          name:"Fort Stevens / Astoria",note:"Columbia R. mouth · remote"},
     ],
   },
   "Washington": {
     "Southwest Washington": [
-      {key:"westport",      name:"Westport",           note:"Most consistent WA break"},
-      {key:"south_jetty_wa",name:"South Jetty",        note:"Powerful · jetty break"},
-      {key:"long_beach_wa", name:"Long Beach WA",      note:"Beach break · exposed"},
+      {key:"long_beach_wa",    name:"Long Beach WA",      note:"Beach break · exposed"},
+      {key:"waikiki_wa",       name:"Waikiki Beach WA",   note:"Long Beach Peninsula"},
+      {key:"westport",         name:"Westport",           note:"Most consistent WA break"},
+      {key:"south_jetty_wa",   name:"South Jetty WA",     note:"Powerful · jetty break"},
+      {key:"grayland",         name:"Grayland Beach",     note:"Beach break · uncrowded"},
     ],
     "Olympic Peninsula": [
-      {key:"moclips",       name:"Moclips",            note:"Beach break · remote"},
-      {key:"la_push",       name:"La Push",            note:"Remote · tribal land"},
-      {key:"shi_shi",       name:"Shi Shi Beach",      note:"Remote · hike in"},
+      {key:"moclips",          name:"Moclips",            note:"Beach break · remote"},
+      {key:"ocean_shores",     name:"Ocean Shores",       note:"Beach break · accessible"},
+      {key:"la_push",          name:"La Push",            note:"Remote · tribal land · scenic"},
+      {key:"rialto",           name:"Rialto Beach",       note:"Beach break · driftwood"},
+      {key:"shi_shi",          name:"Shi Shi Beach",      note:"Remote · hike in · pristine"},
     ],
   },
   "East Coast - Florida": {
-    "Space Coast": [
-      {key:"sebastian_inlet",name:"Sebastian Inlet",   note:"Best FL break · inlet"},
-      {key:"cocoa_beach",    name:"Cocoa Beach",       note:"Consistent · beginner"},
-      {key:"new_smyrna",     name:"New Smyrna Beach",  note:"Sharky · fun waves"},
-      {key:"ponce_inlet",    name:"Ponce Inlet",       note:"Inlet break"},
+    "Space Coast / Brevard": [
+      {key:"sebastian_inlet",  name:"Sebastian Inlet",    note:"Best FL break · N jetty"},
+      {key:"cocoa_beach",      name:"Cocoa Beach",        note:"Consistent · Kelly Slater's home"},
+      {key:"new_smyrna",       name:"New Smyrna Beach",   note:"Fun waves · sharky"},
+      {key:"ponce_inlet",      name:"Ponce Inlet",        note:"Inlet break · consistent"},
+      {key:"melbourne",        name:"Melbourne Beach",    note:"Beach break · consistent"},
     ],
-    "North Florida": [
-      {key:"flagler",        name:"Flagler Beach",     note:"Pier break · consistent"},
-      {key:"jax_beach",      name:"Jacksonville Beach",note:"Beach break"},
+    "Northeast Florida": [
+      {key:"flagler",          name:"Flagler Beach",      note:"Pier break · consistent"},
+      {key:"st_augustine",     name:"St Augustine Beach", note:"Beach break"},
+      {key:"jax_beach",        name:"Jacksonville Beach", note:"Beach break · pier"},
+      {key:"huguenot",         name:"Huguenot Park",      note:"Inlet · sandbar peaks"},
+    ],
+    "Southeast Florida": [
+      {key:"juno_beach",       name:"Juno Beach",         note:"Pier break · SE swell"},
+      {key:"south_beach",      name:"South Beach Miami",  note:"Rarely breaks · SE storm swell"},
     ],
   },
   "East Coast - Mid Atlantic": {
     "North Carolina": [
-      {key:"cape_hatteras",  name:"Cape Hatteras",     note:"Powerful · storm swell"},
-      {key:"rodanthe",       name:"Rodanthe",          note:"OBX · consistent"},
-      {key:"wrightsville",   name:"Wrightsville Beach",note:"Beach break · consistent"},
+      {key:"cape_hatteras",    name:"Cape Hatteras",      note:"Powerful · storm swell"},
+      {key:"rodanthe",         name:"Rodanthe",           note:"OBX · consistent"},
+      {key:"nags_head",        name:"Nags Head",          note:"OBX · beach break"},
+      {key:"kill_devil_hills", name:"Kill Devil Hills",   note:"OBX · consistent"},
+      {key:"kitty_hawk",       name:"Kitty Hawk",         note:"OBX · beach break"},
+      {key:"wrightsville",     name:"Wrightsville Beach", note:"Beach break · consistent"},
+      {key:"carolina_beach",   name:"Carolina Beach",     note:"Beach break · inlet peaks"},
     ],
-    "Virginia / Maryland": [
-      {key:"va_beach",       name:"Virginia Beach",    note:"Beach break · consistent"},
-      {key:"ocean_city_md",  name:"Ocean City MD",     note:"Beach break · storm swell"},
+    "Virginia": [
+      {key:"sandbridge",       name:"Sandbridge Beach",   note:"S of VA Beach · less crowded"},
+      {key:"va_beach",         name:"Virginia Beach Pier",note:"1st St jetty · consistent rights"},
+      {key:"first_landing",    name:"First Landing",      note:"Beach break · N of pier"},
+    ],
+    "Maryland / Delaware": [
+      {key:"ocean_city_md",    name:"Ocean City MD",      note:"Beach break · storm swell"},
+      {key:"assateague",       name:"Assateague Island",  note:"Wild horses · uncrowded · beach"},
+      {key:"bethany",          name:"Bethany Beach DE",   note:"Beach break · consistent"},
     ],
     "New Jersey": [
-      {key:"manasquan",      name:"Manasquan Inlet",   note:"Best NJ break · inlet"},
-      {key:"belmar",         name:"Belmar",            note:"Beach break · consistent"},
-      {key:"asbury_park",    name:"Asbury Park",       note:"Beach break"},
+      {key:"sandy_hook",       name:"Sandy Hook",         note:"N tip NJ · beach break"},
+      {key:"long_branch",      name:"Long Branch",        note:"Beach break"},
+      {key:"asbury_park",      name:"Asbury Park",        note:"Beach break · surf culture"},
+      {key:"belmar",           name:"Belmar",             note:"Beach break · consistent"},
+      {key:"manasquan",        name:"Manasquan Inlet",    note:"Best NJ break · powerful"},
+      {key:"lbi_barnegat",     name:"Barnegat Inlet",     note:"LBI N tip · powerful peaks"},
+      {key:"lbi_beach",        name:"Long Beach Island",  note:"Miles of beach break"},
+      {key:"island_beach",     name:"Island Beach SP",    note:"Barrier island · uncrowded"},
+      {key:"cape_may",         name:"Cape May",           note:"S tip NJ · beach break"},
     ],
-    "New York": [
-      {key:"ditch_plains",   name:"Ditch Plains",      note:"Best NY break · reef"},
-      {key:"montauk",        name:"Montauk",           note:"Multiple breaks"},
-      {key:"long_beach_ny",  name:"Long Beach NY",     note:"Beach break · consistent"},
-      {key:"rockaway",       name:"Rockaway Beach",    note:"NYC surf · beach break"},
+  },
+  "East Coast - New York": {
+    "New York City": [
+      {key:"rockaway",         name:"Rockaway Beach",     note:"NYC surf · beach break"},
+      {key:"rockaway_jetties", name:"Rockaway Jetties",   note:"NYC · hollow near jetties"},
+      {key:"breezy_point",     name:"Breezy Point",       note:"W end Rockaway · beach"},
+    ],
+    "Long Island": [
+      {key:"long_beach_ny",    name:"Long Beach NY",      note:"Beach break · consistent"},
+      {key:"jones_beach",      name:"Jones Beach",        note:"Beach break · accessible"},
+      {key:"gilgo",            name:"Gilgo Beach",        note:"Beach break · remote access"},
+      {key:"lido_beach",       name:"Lido Beach",         note:"Beach break · W of Long Beach"},
+      {key:"ditch_plains",     name:"Ditch Plains",       note:"Best NY break · reef · Montauk"},
+      {key:"montauk",          name:"Montauk",            note:"Multiple breaks · consistent"},
+      {key:"fort_pond",        name:"Fort Pond Bay",      note:"Montauk · sheltered"},
     ],
   },
   "East Coast - New England": {
     "Rhode Island": [
-      {key:"ruggles",        name:"Ruggles",           note:"Reef · localized"},
-      {key:"narragansett",   name:"Narragansett",      note:"Consistent beach break"},
-      {key:"first_beach",    name:"First Beach Newport",note:"Beach break"},
+      {key:"ruggles",          name:"Ruggles",            note:"Best RI break · heavy reef"},
+      {key:"second_beach",     name:"Second Beach",       note:"Newport · beach break"},
+      {key:"first_beach",      name:"First Beach Newport",note:"Newport · beach break"},
+      {key:"narragansett",     name:"Narragansett",       note:"Consistent beach break"},
+      {key:"point_judith",     name:"Point Judith",       note:"Exposed · consistent · E swell"},
+      {key:"matunuck",         name:"Matunuck",           note:"Beach break · consistent"},
+      {key:"charlestown",      name:"Charlestown Breachway",note:"Inlet · powerful · experts"},
     ],
-    "Massachusetts / Maine": [
-      {key:"nahant",         name:"Nahant",            note:"MA · reef · exposed"},
-      {key:"good_harbor",    name:"Good Harbor",       note:"MA · beach break"},
-      {key:"ogunquit",       name:"Ogunquit",          note:"ME · beach break · mellow"},
-      {key:"york_beach",     name:"York Beach",        note:"ME · beach break"},
+    "Massachusetts": [
+      {key:"nantasket",        name:"Nantasket Beach",    note:"Hull · beach break"},
+      {key:"nahant",           name:"Nahant",             note:"Reef · exposed · experts"},
+      {key:"good_harbor",      name:"Good Harbor",        note:"Gloucester · beach break"},
+      {key:"plum_island",      name:"Plum Island",        note:"N of Boston · beach break"},
+      {key:"whitecrest",       name:"Whitecrest Beach",   note:"Cape Cod · Atlantic facing"},
+      {key:"marconi",          name:"Marconi Beach",      note:"Cape Cod · National Seashore"},
+    ],
+    "New Hampshire / Maine": [
+      {key:"hampton_beach",    name:"Hampton Beach NH",   note:"Beach break · accessible"},
+      {key:"rye_beach",        name:"Rye Beach NH",       note:"Beach break · rocky"},
+      {key:"york_beach",       name:"York Beach ME",      note:"Beach break"},
+      {key:"ogunquit",         name:"Ogunquit ME",        note:"Beach break · mellow"},
+      {key:"wells_beach",      name:"Wells Beach ME",     note:"Beach break · consistent"},
+      {key:"scarborough",      name:"Scarborough Beach ME",note:"Best ME beach break"},
+      {key:"higgins_beach",    name:"Higgins Beach ME",   note:"Beach break · local vibe"},
+      {key:"fortune_rocks",    name:"Fortune Rocks ME",   note:"Point break · N of Biddeford"},
     ],
   },
+};
+
+// Full coordinate lookup - all spots
+const COORDS = {
+  // San Diego South
+  tijuana_sloughs:{lat:32.5542,lng:-117.1253}, imperial_beach:{lat:32.5811,lng:-117.1339},
+  silver_strand:{lat:32.6328,lng:-117.1481}, coronado:{lat:32.6836,lng:-117.1761},
+  sunset_cliffs_ab:{lat:32.7108,lng:-117.2581}, sunset_cliffs:{lat:32.7215,lng:-117.2568},
+  // OB / PB
+  ob_pier:{lat:32.7528,lng:-117.2553}, ob_jetty:{lat:32.7566,lng:-117.2531},
+  avalanche:{lat:32.7544,lng:-117.2534}, south_mission:{lat:32.7594,lng:-117.2519},
+  mission:{lat:32.7662,lng:-117.2525}, pb_dr:{lat:32.7795,lng:-117.2510},
+  crystal:{lat:32.7882,lng:-117.2527}, tourm:{lat:32.7972,lng:-117.2597},
+  pb_point:{lat:32.8031,lng:-117.2619},
+  // La Jolla
+  bird_rock:{lat:32.8144,lng:-117.2703}, windansea:{lat:32.8281,lng:-117.2789},
+  big_rock:{lat:32.8319,lng:-117.2817}, horseshoes:{lat:32.8419,lng:-117.2858},
+  hospitals:{lat:32.8464,lng:-117.2869}, lj_shores:{lat:32.8572,lng:-117.2567},
+  blacks:{lat:32.8789,lng:-117.2519}, scripps:{lat:32.8664,lng:-117.2541},
+  torrey_pines:{lat:32.9142,lng:-117.2558},
+  // Del Mar / Solana
+  fletcher_cove:{lat:32.9897,lng:-117.2717}, tide_beach:{lat:32.9975,lng:-117.2717},
+  del_mar_dog:{lat:32.9556,lng:-117.2736}, delmar_15:{lat:32.9561,lng:-117.2719},
+  delmar_river:{lat:32.9609,lng:-117.2739}, delmar_29:{lat:32.9680,lng:-117.2724},
+  // Encinitas / Cardiff
+  seaside_reef:{lat:33.0039,lng:-117.2808}, table_tops:{lat:33.0069,lng:-117.2808},
+  cardiff:{lat:33.0136,lng:-117.2820}, san_elijo:{lat:33.0200,lng:-117.2836},
+  pipes:{lat:33.0281,lng:-117.2883}, swamis:{lat:33.0367,lng:-117.2921},
+  d_street:{lat:33.0419,lng:-117.2919}, moonlight:{lat:33.0467,lng:-117.2942},
+  stone_steps:{lat:33.0519,lng:-117.2939}, beacons:{lat:33.0547,lng:-117.2939},
+  grandview:{lat:33.0574,lng:-117.2940},
+  // Carlsbad / Oceanside
+  south_ponto:{lat:33.0831,lng:-117.3033}, ponto:{lat:33.0894,lng:-117.3056},
+  tamarack:{lat:33.1522,lng:-117.3369}, warm_water_jetty:{lat:33.1317,lng:-117.3283},
+  carlsbad_state:{lat:33.1072,lng:-117.3100}, oceanside_pier:{lat:33.1958,lng:-117.3800},
+  oceanside_harbor:{lat:33.2119,lng:-117.3922}, san_luis_rey:{lat:33.2233,lng:-117.4017},
+  // OC
+  trestles:{lat:33.3828,lng:-117.5897}, lowers:{lat:33.3789,lng:-117.5878},
+  uppers:{lat:33.3867,lng:-117.5906}, cottons:{lat:33.3744,lng:-117.5853},
+  san_onofre:{lat:33.3697,lng:-117.5636}, trail1:{lat:33.4050,lng:-117.6019},
+  doheny:{lat:33.4611,lng:-117.6731}, salt_creek:{lat:33.4867,lng:-117.7103},
+  brooks_street:{lat:33.5422,lng:-117.7853}, thalia:{lat:33.5328,lng:-117.7814},
+  huntington:{lat:33.6553,lng:-118.0005}, newps_pier:{lat:33.6033,lng:-117.9322},
+  the_wedge:{lat:33.5936,lng:-117.8819}, "54th_st":{lat:33.6161,lng:-117.9283},
+  // LA
+  malibu:{lat:34.0361,lng:-118.6789}, sunset_pt:{lat:34.0433,lng:-118.6619},
+  zuma:{lat:34.0155,lng:-118.8228}, county_line:{lat:34.0561,lng:-118.9178},
+  topanga:{lat:34.0428,lng:-118.5981}, venice:{lat:33.9850,lng:-118.4695},
+  el_porto:{lat:33.9022,lng:-118.4286}, manhattan_pier:{lat:33.8869,lng:-118.4153},
+  hermosa:{lat:33.8622,lng:-118.4003}, redondo:{lat:33.8492,lng:-118.3933},
+  palos_verdes:{lat:33.7456,lng:-118.4175},
+  // Ventura / SB
+  rincon:{lat:34.3733,lng:-119.4756}, c_street:{lat:34.2731,lng:-119.3103},
+  emma_wood:{lat:34.2947,lng:-119.3311}, ventura_pier:{lat:34.2697,lng:-119.2978},
+  hammonds:{lat:34.4047,lng:-119.6481}, leadbetter:{lat:34.4072,lng:-119.6969},
+  campus_pt:{lat:34.4103,lng:-119.8444}, sandyland:{lat:34.4003,lng:-119.5578},
+  // Central Coast
+  pismo:{lat:35.1428,lng:-120.6411}, shell_beach:{lat:35.1642,lng:-120.6742},
+  morro_rock:{lat:35.3697,lng:-120.8753}, cayucos:{lat:35.4428,lng:-120.9108},
+  moonstone:{lat:35.5594,lng:-121.0861},
+  // Monterey
+  steamer_lane:{lat:36.9514,lng:-122.0264}, pleasure_pt:{lat:36.9619,lng:-121.9731},
+  cowell:{lat:36.9522,lng:-122.0267}, "26th_ave":{lat:36.9622,lng:-121.9819},
+  capitola:{lat:36.9753,lng:-121.9533}, manresa:{lat:36.9353,lng:-121.8617},
+  mavericks:{lat:37.4958,lng:-122.5008}, pacifica:{lat:37.6108,lng:-122.4897},
+  // SF
+  ocean_beach_sf:{lat:37.7594,lng:-122.5107}, kelly_cove:{lat:37.7700,lng:-122.5117},
+  linda_mar:{lat:37.5961,lng:-122.4997}, fort_point:{lat:37.8108,lng:-122.4775},
+  // North Coast CA
+  bolinas:{lat:37.9083,lng:-122.7167}, salmon_creek:{lat:38.3522,lng:-123.0736},
+  goat_rock:{lat:38.4508,lng:-123.1303}, fort_bragg:{lat:39.4458,lng:-123.8119},
+  shelter_cove:{lat:40.0278,lng:-124.0736},
+  // Oregon
+  brookings:{lat:42.0528,lng:-124.2831}, gold_beach:{lat:42.4039,lng:-124.4228},
+  bandon:{lat:43.1178,lng:-124.4097}, bastendorff:{lat:43.3517,lng:-124.3583},
+  winchester_bay:{lat:43.6803,lng:-124.1986}, florence:{lat:43.9825,lng:-124.1050},
+  waldport:{lat:44.4281,lng:-124.0731}, newport_or:{lat:44.6364,lng:-124.0531},
+  boiler_bay:{lat:44.8328,lng:-124.0600}, otter_rock:{lat:44.7458,lng:-124.0606},
+  lincoln_city:{lat:44.9578,lng:-124.0136}, nelscott:{lat:44.8619,lng:-124.0444},
+  neskowin:{lat:45.1025,lng:-123.9817}, pacific_city:{lat:45.2078,lng:-123.9608},
+  tillamook:{lat:45.4561,lng:-123.8442}, oswald_west:{lat:45.7481,lng:-123.9583},
+  cannon_beach:{lat:45.8892,lng:-123.9617}, seaside:{lat:45.9933,lng:-123.9233},
+  gearhart:{lat:46.0281,lng:-123.9181}, astoria:{lat:46.1878,lng:-123.8314},
+  // Washington
+  long_beach_wa:{lat:46.3522,lng:-124.0525}, waikiki_wa:{lat:46.5328,lng:-124.0594},
+  westport:{lat:46.9008,lng:-124.1050}, south_jetty_wa:{lat:46.9069,lng:-124.1097},
+  grayland:{lat:46.7864,lng:-124.0819}, moclips:{lat:47.2394,lng:-124.2119},
+  ocean_shores:{lat:46.9753,lng:-124.1589}, la_push:{lat:47.9108,lng:-124.6356},
+  rialto:{lat:47.9344,lng:-124.6417}, shi_shi:{lat:48.2733,lng:-124.6869},
+  // Florida
+  sebastian_inlet:{lat:27.8594,lng:-80.4508}, cocoa_beach:{lat:28.3200,lng:-80.6078},
+  new_smyrna:{lat:29.0258,lng:-80.9272}, ponce_inlet:{lat:29.0811,lng:-80.9297},
+  melbourne:{lat:28.0694,lng:-80.5628}, flagler:{lat:29.4728,lng:-81.1283},
+  st_augustine:{lat:29.8553,lng:-81.2639}, jax_beach:{lat:30.2936,lng:-81.3967},
+  huguenot:{lat:30.3908,lng:-81.4033}, juno_beach:{lat:26.8683,lng:-80.0567},
+  south_beach:{lat:25.7825,lng:-80.1300},
+  // NC
+  cape_hatteras:{lat:35.2306,lng:-75.5283}, rodanthe:{lat:35.5925,lng:-75.4658},
+  nags_head:{lat:35.9572,lng:-75.6244}, kill_devil_hills:{lat:36.0308,lng:-75.6672},
+  kitty_hawk:{lat:36.0644,lng:-75.7094}, wrightsville:{lat:34.2083,lng:-77.7969},
+  carolina_beach:{lat:34.0533,lng:-77.8950},
+  // Virginia
+  sandbridge:{lat:36.7283,lng:-76.0050}, va_beach:{lat:36.8519,lng:-75.9780},
+  first_landing:{lat:36.9239,lng:-76.0097},
+  // MD/DE
+  ocean_city_md:{lat:38.3365,lng:-75.0849}, assateague:{lat:38.1428,lng:-75.1506},
+  bethany:{lat:38.5400,lng:-75.0614},
+  // NJ
+  sandy_hook:{lat:40.4772,lng:-73.9958}, long_branch:{lat:40.2986,lng:-73.9917},
+  asbury_park:{lat:40.2203,lng:-74.0128}, belmar:{lat:40.1753,lng:-74.0233},
+  manasquan:{lat:40.1019,lng:-74.0431}, lbi_barnegat:{lat:39.7597,lng:-74.1044},
+  lbi_beach:{lat:39.6581,lng:-74.2261}, island_beach:{lat:39.8331,lng:-74.0953},
+  cape_may:{lat:38.9317,lng:-74.9119},
+  // NY
+  rockaway:{lat:40.5828,lng:-73.8158}, rockaway_jetties:{lat:40.5617,lng:-73.8892},
+  breezy_point:{lat:40.5567,lng:-73.9319}, long_beach_ny:{lat:40.5883,lng:-73.6586},
+  jones_beach:{lat:40.6003,lng:-73.5247}, gilgo:{lat:40.6261,lng:-73.4178},
+  lido_beach:{lat:40.5883,lng:-73.6983}, ditch_plains:{lat:41.0311,lng:-71.9367},
+  montauk:{lat:41.0428,lng:-71.9547}, fort_pond:{lat:41.0483,lng:-71.9206},
+  // Rhode Island
+  ruggles:{lat:41.4614,lng:-71.4619}, second_beach:{lat:41.4794,lng:-71.2522},
+  first_beach:{lat:41.4878,lng:-71.3083}, narragansett:{lat:41.4511,lng:-71.4567},
+  point_judith:{lat:41.3617,lng:-71.4836}, matunuck:{lat:41.3783,lng:-71.5297},
+  charlestown:{lat:41.3644,lng:-71.6406},
+  // MA
+  nantasket:{lat:42.2633,lng:-70.8761}, nahant:{lat:42.4256,lng:-70.9233},
+  good_harbor:{lat:42.6228,lng:-70.6564}, plum_island:{lat:42.7919,lng:-70.7817},
+  whitecrest:{lat:41.9833,lng:-69.9653}, marconi:{lat:41.9094,lng:-69.9394},
+  // NH/ME
+  hampton_beach:{lat:42.9044,lng:-70.8133}, rye_beach:{lat:43.0000,lng:-70.7497},
+  york_beach:{lat:43.1728,lng:-70.6114}, ogunquit:{lat:43.2494,lng:-70.5983},
+  wells_beach:{lat:43.3197,lng:-70.5756}, scarborough:{lat:43.5506,lng:-70.3722},
+  higgins_beach:{lat:43.5672,lng:-70.3386}, fortune_rocks:{lat:43.4783,lng:-70.4569},
 };
 
 const selected = new Set();
 let daysAhead = 1;
 let currentRegionSpots = [];
 
-// Populate state dropdown
 const stateSelect = document.getElementById("sel-state");
 Object.keys(SPOTS_DB).forEach(state => {
   const opt = document.createElement("option");
-  opt.value = state;
-  opt.textContent = state;
+  opt.value = state; opt.textContent = state;
   stateSelect.appendChild(opt);
 });
 
 function onStateChange() {
   const state = stateSelect.value;
   const regionSelect = document.getElementById("sel-region");
-  regionSelect.innerHTML = '<option value="">Region</option>';
+  regionSelect.innerHTML = '<option value="">Sub-region</option>';
   regionSelect.disabled = !state;
   if (state) {
     Object.keys(SPOTS_DB[state]).forEach(region => {
       const opt = document.createElement("option");
-      opt.value = region;
-      opt.textContent = region;
+      opt.value = region; opt.textContent = region;
       regionSelect.appendChild(opt);
     });
   }
   clearAll();
-  document.getElementById("spot-sections").innerHTML = '<div class="empty-state">Select a region above to see spots</div>';
+  document.getElementById("spot-sections").innerHTML = '<div class="empty-state">Select a sub-region above</div>';
   currentRegionSpots = [];
 }
 
@@ -336,14 +555,9 @@ function renderSpots(spots) {
   updateCount();
 }
 
-function updateCount() {
-  document.getElementById("count-pill").textContent = selected.size + " selected";
-}
+function updateCount() { document.getElementById("count-pill").textContent = selected.size + " selected"; }
 function selectAll() {
-  currentRegionSpots.forEach(s => {
-    selected.add(s.key);
-    document.getElementById("chip-"+s.key)?.classList.add("selected");
-  });
+  currentRegionSpots.forEach(s => { selected.add(s.key); document.getElementById("chip-"+s.key)?.classList.add("selected"); });
   updateCount();
 }
 function clearAll() {
@@ -363,16 +577,15 @@ function setLoading(loading, statusText, isNow) {
   const row = document.getElementById("status-row");
   if (loading) {
     btn.disabled = true; nowBtn.disabled = true;
-    if (isNow) { nowBtn.textContent = "⚡ Fetching…"; }
-    else { btn.innerHTML = '<span class="spinner"></span>Fetching forecast…'; }
+    if (isNow) nowBtn.textContent = "⚡ Fetching…";
+    else btn.innerHTML = '<span class="spinner"></span>Fetching forecast…';
     row.style.display = "flex";
     document.getElementById("status-text").textContent = statusText;
     document.getElementById("error").style.display = "none";
     document.getElementById("result-card").style.display = "none";
   } else {
     btn.disabled = false; nowBtn.disabled = false;
-    btn.textContent = "Get forecast";
-    nowBtn.textContent = "⚡ Right Now";
+    btn.textContent = "Get forecast"; nowBtn.textContent = "⚡ Right Now";
     row.style.display = "none";
   }
 }
@@ -390,11 +603,23 @@ async function doFetch(nowMode) {
     document.getElementById("error").textContent = "Select at least one spot.";
     return;
   }
-  setLoading(true, "Fetching wave data for " + selected.size + " spot(s)…", nowMode);
+  // Build spots array with coordinates
+  const spotsPayload = [...selected].map(key => {
+    const c = COORDS[key];
+    return c ? { key, lat: c.lat, lng: c.lng } : null;
+  }).filter(Boolean);
+
+  if (spotsPayload.length === 0) {
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error").textContent = "No coordinate data for selected spots.";
+    return;
+  }
+
+  setLoading(true, "Fetching wave data for " + spotsPayload.length + " spot(s)…", nowMode);
   try {
     const body = nowMode
-      ? { spots: [...selected], now: true }
-      : { spots: [...selected], days_ahead: daysAhead };
+      ? { spots: spotsPayload, now: true }
+      : { spots: spotsPayload, days_ahead: daysAhead };
     const res = await fetch("/api/forecast", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
