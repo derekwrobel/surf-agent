@@ -38,11 +38,11 @@
   .quick-btns{display:flex;gap:8px;margin-bottom:4px;flex-wrap:wrap;}
   .quick-btn{font-size:12px;padding:6px 12px;border:0.5px solid var(--border);border-radius:20px;background:var(--card);color:var(--text-secondary);cursor:pointer;}
   .count-pill{font-size:11px;padding:2px 8px;background:var(--green-light);color:var(--green-dark);border-radius:20px;margin-left:6px;font-weight:500;}
-  .now-btn{width:100%;padding:13px;background:transparent;color:var(--green);border:1.5px solid var(--green);border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px;}
-  .now-btn:active{opacity:.7;} .now-btn:disabled{opacity:.4;}
-  .day-selector{display:flex;gap:8px;}
-  .day-btn{flex:1;padding:10px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);font-size:13px;cursor:pointer;text-align:center;}
-  .day-btn.selected{border:1.5px solid var(--green);background:var(--green-light);color:var(--green-dark);font-weight:500;}
+  .datetime-input{width:100%;font-size:15px;padding:11px 14px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);outline:none;margin-bottom:4px;-webkit-appearance:none;}
+  .datetime-input:focus{border-color:var(--green);}
+  .datetime-shortcuts{display:flex;gap:7px;margin-bottom:4px;flex-wrap:wrap;}
+  .shortcut-btn{font-size:12px;padding:6px 11px;border:0.5px solid var(--border);border-radius:20px;background:var(--card);color:var(--text-secondary);cursor:pointer;white-space:nowrap;}
+  .shortcut-btn:active{opacity:.7;}
   .go-btn{width:100%;padding:16px;background:var(--green);color:white;border:none;border-radius:var(--radius);font-size:16px;font-weight:600;cursor:pointer;margin-top:8px;}
   .go-btn:active{opacity:.85;} .go-btn:disabled{opacity:.4;}
   .result-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:20px;}
@@ -79,11 +79,12 @@
   </div>
   <div id="spot-sections"><div class="empty-state">Select a region above to see spots</div></div>
   <div class="section-label">When</div>
-  <button class="now-btn" id="now-btn" onclick="getForecastNow()">⚡ Right Now</button>
-  <div class="day-selector">
-    <button class="day-btn selected" data-days="1" onclick="selectDay(this)">Tomorrow</button>
-    <button class="day-btn" data-days="2" onclick="selectDay(this)">In 2 days</button>
-    <button class="day-btn" data-days="3" onclick="selectDay(this)">In 3 days</button>
+  <input type="datetime-local" class="datetime-input" id="forecast-dt" />
+  <div class="datetime-shortcuts">
+    <button class="shortcut-btn" onclick="setShortcut(0)">⚡ Right Now</button>
+    <button class="shortcut-btn" onclick="setShortcut(1, 5, 30)">Tomorrow dawn</button>
+    <button class="shortcut-btn" onclick="setShortcut(2, 5, 30)">+2 days dawn</button>
+    <button class="shortcut-btn" onclick="setShortcut(3, 5, 30)">+3 days dawn</button>
   </div>
   <button class="go-btn" id="go-btn" onclick="getForecast()">Get forecast</button>
   <div id="status-row" style="display:none;" class="status-row"><div class="dot"></div><span id="status-text">Fetching wave data…</span></div>
@@ -500,7 +501,7 @@ const COORDS = {
 };
 
 const selected = new Set();
-let daysAhead = 1;
+// datetime managed via input
 let activeRegions = new Set(); // multi-selected region keys
 
 const stateSelect = document.getElementById("sel-state");
@@ -608,27 +609,48 @@ function clearAll() {
   document.querySelectorAll(".spot-chip").forEach(el => el.classList.remove("selected"));
   updateCount();
 }
-function selectDay(btn) {
-  document.querySelectorAll(".day-btn").forEach(b => b.classList.remove("selected"));
-  btn.classList.add("selected");
-  daysAhead = parseInt(btn.dataset.days);
+// --- Datetime helpers ---
+function dtInput() { return document.getElementById("forecast-dt"); }
+
+function toLocalISO(d) {
+  // Format a Date as yyyy-MM-ddTHH:mm for datetime-local input
+  const pad = n => String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function setLoading(loading, statusText, isNow) {
+function setShortcut(daysAhead, hour=null, minute=0) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  if (hour === null) {
+    // Right Now — use current time rounded down to hour
+    d.setMinutes(0, 0, 0);
+  } else {
+    d.setHours(hour, minute, 0, 0);
+  }
+  dtInput().value = toLocalISO(d);
+}
+
+// Default to tomorrow 5:30 AM on load
+(function initDatetime() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(5, 30, 0, 0);
+  dtInput().value = toLocalISO(d);
+})();
+
+function setLoading(loading, statusText) {
   const btn = document.getElementById("go-btn");
-  const nowBtn = document.getElementById("now-btn");
   const row = document.getElementById("status-row");
   if (loading) {
-    btn.disabled = true; nowBtn.disabled = true;
-    if (isNow) nowBtn.textContent = "⚡ Fetching…";
-    else btn.innerHTML = '<span class="spinner"></span>Fetching forecast…';
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Fetching forecast…';
     row.style.display = "flex";
     document.getElementById("status-text").textContent = statusText;
     document.getElementById("error").style.display = "none";
     document.getElementById("result-card").style.display = "none";
   } else {
-    btn.disabled = false; nowBtn.disabled = false;
-    btn.textContent = "Get forecast"; nowBtn.textContent = "⚡ Right Now";
+    btn.disabled = false;
+    btn.textContent = "Get forecast";
     row.style.display = "none";
   }
 }
@@ -640,13 +662,28 @@ function formatResult(text) {
     .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
 }
 
-async function doFetch(nowMode) {
+async function getForecast() {
   if (selected.size === 0) {
     document.getElementById("error").style.display = "block";
     document.getElementById("error").textContent = "Select at least one spot.";
     return;
   }
-  // Build spots array with coordinates
+
+  const dtVal = dtInput().value;
+  if (!dtVal) {
+    document.getElementById("error").style.display = "block";
+    document.getElementById("error").textContent = "Please select a date and time.";
+    return;
+  }
+
+  const chosenDate = new Date(dtVal);
+  const now = new Date();
+  const nowMode = chosenDate <= now; // treat as "right now" if in the past or current hour
+
+  // Compute days_ahead as a float for the backend (it only uses integer days for Open-Meteo)
+  const msPerDay = 86400000;
+  const daysAhead = Math.max(0, Math.round((chosenDate - now) / msPerDay));
+
   const spotsPayload = [...selected].map(key => {
     const c = COORDS[key];
     return c ? { key, lat: c.lat, lng: c.lng } : null;
@@ -658,11 +695,14 @@ async function doFetch(nowMode) {
     return;
   }
 
-  setLoading(true, "Fetching wave data for " + spotsPayload.length + " spot(s)…", nowMode);
+  const timeLabel = nowMode ? "right now" : chosenDate.toLocaleString("en-US", {weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit"});
+  setLoading(true, `Fetching forecast for ${timeLabel}…`);
+
   try {
     const body = nowMode
       ? { spots: spotsPayload, now: true }
       : { spots: spotsPayload, days_ahead: daysAhead };
+
     const res = await fetch("/api/forecast", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -682,9 +722,6 @@ async function doFetch(nowMode) {
     document.getElementById("error").textContent = "Error: " + e.message;
   }
 }
-
-function getForecast() { doFetch(false); }
-function getForecastNow() { doFetch(true); }
 </script>
 </body>
 </html>
