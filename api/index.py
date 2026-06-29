@@ -434,7 +434,9 @@ def get_forecast():
 
 
 @app.route("/api/cron", methods=["GET","POST"])
+@app.route("/api/cron-run", methods=["GET","POST"])
 @app.route("/cron", methods=["GET","POST"])
+@app.route("/cron-run", methods=["GET","POST"])
 def run_cron():
     auth = request.headers.get("Authorization", "")
     cron_secret = os.environ.get("CRON_SECRET", "")
