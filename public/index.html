@@ -24,7 +24,9 @@
   .section-label:first-of-type{margin-top:8px;}
   .select-row{display:flex;gap:8px;margin-bottom:8px;}
   .loc-select{flex:1;font-size:14px;padding:10px 12px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--text);outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
-  .loc-select:disabled{opacity:0.4;}
+  .region-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;margin-bottom:4px;}
+  .region-chip{font-size:12px;padding:7px 12px;border:0.5px solid var(--border);border-radius:20px;background:var(--card);color:var(--text-secondary);cursor:pointer;user-select:none;}
+  .region-chip.active{border:1.5px solid var(--green);background:var(--green-light);color:var(--green-dark);font-weight:500;}
   .zone-label{font-size:11px;font-weight:600;color:var(--text-tertiary);letter-spacing:.05em;text-transform:uppercase;margin:14px 0 6px;}
   .spot-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:4px;}
   .spot-chip{padding:10px 12px;border:0.5px solid var(--border);border-radius:10px;background:var(--card);cursor:pointer;user-select:none;}
@@ -65,8 +67,8 @@
   <div class="section-label">Location</div>
   <div class="select-row">
     <select class="loc-select" id="sel-state" onchange="onStateChange()"><option value="">State / Region</option></select>
-    <select class="loc-select" id="sel-region" onchange="onRegionChange()" disabled><option value="">Sub-region</option></select>
   </div>
+  <div class="region-chips" id="region-chips"><span style="font-size:13px;color:var(--text-tertiary)">Select a state above</span></div>
   <div style="display:flex;align-items:center;margin-top:16px;margin-bottom:6px;">
     <div class="section-label" style="margin:0;">Spots</div>
     <span class="count-pill" id="count-pill">0 selected</span>
@@ -499,7 +501,7 @@ const COORDS = {
 
 const selected = new Set();
 let daysAhead = 1;
-let currentRegionSpots = [];
+let activeRegions = new Set(); // multi-selected region keys
 
 const stateSelect = document.getElementById("sel-state");
 Object.keys(SPOTS_DB).forEach(state => {
@@ -510,54 +512,95 @@ Object.keys(SPOTS_DB).forEach(state => {
 
 function onStateChange() {
   const state = stateSelect.value;
-  const regionSelect = document.getElementById("sel-region");
-  regionSelect.innerHTML = '<option value="">Sub-region</option>';
-  regionSelect.disabled = !state;
-  if (state) {
-    Object.keys(SPOTS_DB[state]).forEach(region => {
-      const opt = document.createElement("option");
-      opt.value = region; opt.textContent = region;
-      regionSelect.appendChild(opt);
-    });
+  activeRegions.clear();
+  clearAll();
+  const chipContainer = document.getElementById("region-chips");
+  if (!state) {
+    chipContainer.innerHTML = '<span style="font-size:13px;color:var(--text-tertiary)">Select a state above</span>';
+    document.getElementById("spot-sections").innerHTML = '<div class="empty-state">Select a region above to see spots</div>';
+    return;
   }
-  clearAll();
-  document.getElementById("spot-sections").innerHTML = '<div class="empty-state">Select a sub-region above</div>';
-  currentRegionSpots = [];
-}
-
-function onRegionChange() {
-  const state = stateSelect.value;
-  const region = document.getElementById("sel-region").value;
-  if (!state || !region) return;
-  currentRegionSpots = SPOTS_DB[state][region];
-  renderSpots(currentRegionSpots);
-  clearAll();
-}
-
-function renderSpots(spots) {
-  const container = document.getElementById("spot-sections");
-  container.innerHTML = "";
-  const grid = document.createElement("div");
-  grid.className = "spot-grid";
-  spots.forEach(s => {
-    const el = document.createElement("div");
-    el.className = "spot-chip" + (selected.has(s.key) ? " selected" : "");
-    el.id = "chip-" + s.key;
-    el.innerHTML = `<div class="spot-chip-name">${s.name}</div><div class="spot-chip-note">${s.note}</div>`;
-    el.onclick = () => {
-      selected.has(s.key) ? selected.delete(s.key) : selected.add(s.key);
-      el.classList.toggle("selected", selected.has(s.key));
-      updateCount();
-    };
-    grid.appendChild(el);
+  chipContainer.innerHTML = "";
+  Object.keys(SPOTS_DB[state]).forEach(region => {
+    const chip = document.createElement("div");
+    chip.className = "region-chip";
+    chip.textContent = region;
+    chip.dataset.region = region;
+    chip.onclick = () => toggleRegion(state, region, chip);
+    chipContainer.appendChild(chip);
   });
-  container.appendChild(grid);
+  document.getElementById("spot-sections").innerHTML = '<div class="empty-state">Tap regions above to see spots</div>';
+}
+
+function toggleRegion(state, region, chipEl) {
+  if (activeRegions.has(region)) {
+    activeRegions.delete(region);
+    chipEl.classList.remove("active");
+  } else {
+    activeRegions.add(region);
+    chipEl.classList.add("active");
+  }
+  renderActiveSpots(state);
+}
+
+function renderActiveSpots(state) {
+  // Gather all spots from all active regions
+  const allSpots = [];
+  const seenKeys = new Set();
+  activeRegions.forEach(region => {
+    (SPOTS_DB[state][region] || []).forEach(s => {
+      if (!seenKeys.has(s.key)) { allSpots.push({...s, region}); seenKeys.add(s.key); }
+    });
+  });
+
+  const container = document.getElementById("spot-sections");
+  if (allSpots.length === 0) {
+    container.innerHTML = '<div class="empty-state">Tap regions above to see spots</div>';
+    // Remove any spot chips that are no longer shown
+    selected.forEach(key => { if (!seenKeys.has(key)) selected.delete(key); });
+    updateCount();
+    return;
+  }
+
+  // Group by region for display
+  container.innerHTML = "";
+  activeRegions.forEach(region => {
+    const regionSpots = (SPOTS_DB[state][region] || []);
+    if (!regionSpots.length) return;
+    const zl = document.createElement("div");
+    zl.className = "zone-label";
+    zl.textContent = region;
+    container.appendChild(zl);
+    const grid = document.createElement("div");
+    grid.className = "spot-grid";
+    regionSpots.forEach(s => {
+      const el = document.createElement("div");
+      el.className = "spot-chip" + (selected.has(s.key) ? " selected" : "");
+      el.id = "chip-" + s.key;
+      el.innerHTML = `<div class="spot-chip-name">${s.name}</div><div class="spot-chip-note">${s.note}</div>`;
+      el.onclick = () => {
+        selected.has(s.key) ? selected.delete(s.key) : selected.add(s.key);
+        el.classList.toggle("selected", selected.has(s.key));
+        updateCount();
+      };
+      grid.appendChild(el);
+    });
+    container.appendChild(grid);
+  });
+
+  // Clean up selected spots that are no longer visible
+  selected.forEach(key => { if (!seenKeys.has(key)) selected.delete(key); });
   updateCount();
 }
 
 function updateCount() { document.getElementById("count-pill").textContent = selected.size + " selected"; }
+
 function selectAll() {
-  currentRegionSpots.forEach(s => { selected.add(s.key); document.getElementById("chip-"+s.key)?.classList.add("selected"); });
+  document.querySelectorAll(".spot-chip").forEach(el => {
+    const key = el.id.replace("chip-", "");
+    selected.add(key);
+    el.classList.add("selected");
+  });
   updateCount();
 }
 function clearAll() {
