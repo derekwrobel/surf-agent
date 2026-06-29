@@ -1,19 +1,17 @@
-from flask import Flask, request, jsonify
-import json, os, urllib.request, urllib.parse, zoneinfo, hashlib
-from datetime import datetime, timedelta
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
+
+from flask import Flask, request, jsonify
+import json, urllib.request, urllib.parse, zoneinfo, hashlib, math as _math
+from datetime import datetime, timedelta
 from cache import cache_get, cache_set, cache_available
 
 app = Flask(__name__)
 
-import math as _math
-
 # ---------------------------------------------------------------------------
-# Full NOAA buoy database — nearest 2 selected dynamically per request
+# NOAA buoy database — nearest 2 selected dynamically per request
 # ---------------------------------------------------------------------------
 ALL_BUOYS = [
-    # San Diego nearshore / offshore
     {"id":"46258","name":"Mission Bay West",          "lat":32.749,"lng":-117.369,"note":"OB/Mission Beach"},
     {"id":"46254","name":"Scripps Nearshore",         "lat":32.868,"lng":-117.267,"note":"La Jolla nearshore"},
     {"id":"46266","name":"Del Mar Nearshore",         "lat":32.957,"lng":-117.279,"note":"Del Mar/Torrey Pines"},
@@ -22,13 +20,11 @@ ALL_BUOYS = [
     {"id":"46232","name":"Point Loma South",          "lat":32.517,"lng":-117.425,"note":"S SD offshore"},
     {"id":"46235","name":"Imperial Beach Nearshore",  "lat":32.494,"lng":-117.422,"note":"IB/Coronado"},
     {"id":"46086","name":"San Clemente Island",       "lat":32.491,"lng":-118.046,"note":"S/SW swell approach SD"},
-    # Southern California
     {"id":"46025","name":"Santa Monica Basin",        "lat":33.749,"lng":-119.053,"note":"NW swell approach SoCal"},
     {"id":"46285","name":"Capistrano Beach Nearshore","lat":33.428,"lng":-117.666,"note":"Dana Point/OC"},
     {"id":"46253","name":"San Pedro South",           "lat":33.518,"lng":-118.186,"note":"OC offshore"},
     {"id":"46222","name":"San Pedro",                 "lat":33.618,"lng":-118.317,"note":"Long Beach/San Pedro"},
     {"id":"46221","name":"Santa Monica Bay",          "lat":33.860,"lng":-118.641,"note":"LA/Santa Monica"},
-    # Central California
     {"id":"46069","name":"S Santa Barbara Basin",    "lat":34.259,"lng":-120.671,"note":"Ventura/SB offshore"},
     {"id":"46054","name":"West Santa Barbara",        "lat":34.274,"lng":-120.459,"note":"Santa Barbara"},
     {"id":"46011","name":"Santa Maria",               "lat":34.956,"lng":-120.998,"note":"Central Coast/SLO"},
@@ -40,32 +36,26 @@ ALL_BUOYS = [
     {"id":"46236","name":"Point Reyes",               "lat":37.907,"lng":-123.470,"note":"Point Reyes NorCal"},
     {"id":"46014","name":"Point Arena",               "lat":39.235,"lng":-123.974,"note":"Mendocino"},
     {"id":"46022","name":"Eel River",                 "lat":40.716,"lng":-124.540,"note":"Eureka/NorCal"},
-    # Oregon
     {"id":"46027","name":"St. George",                "lat":41.849,"lng":-124.381,"note":"Crescent City/OR border"},
     {"id":"46015","name":"Port Orford",               "lat":42.754,"lng":-124.839,"note":"S Oregon"},
     {"id":"46229","name":"Umpqua Offshore",           "lat":43.772,"lng":-124.549,"note":"Coos Bay/Central OR"},
     {"id":"46050","name":"Stonewall Bank",            "lat":44.679,"lng":-124.535,"note":"Newport/Central OR"},
     {"id":"46089","name":"Tillamook",                 "lat":45.928,"lng":-125.815,"note":"N Oregon/Tillamook"},
     {"id":"46029","name":"Columbia River Bar",        "lat":46.148,"lng":-124.508,"note":"Columbia River/Seaside"},
-    # Washington
     {"id":"46041","name":"Cape Elizabeth",            "lat":47.353,"lng":-124.731,"note":"WA coast/Westport"},
     {"id":"46087","name":"Neah Bay",                  "lat":48.494,"lng":-124.726,"note":"NW Washington"},
-    # East Coast - Florida
     {"id":"41009","name":"Canaveral 20NM",            "lat":28.508,"lng":-80.185, "note":"Cape Canaveral/Space Coast"},
     {"id":"41010","name":"Canaveral 120NM",           "lat":28.906,"lng":-78.471, "note":"E Florida offshore"},
     {"id":"41112","name":"NE Florida Nearshore",      "lat":30.709,"lng":-81.292, "note":"Jacksonville/NE FL"},
     {"id":"41047","name":"NE Bahamas",                "lat":27.513,"lng":-71.490, "note":"Deep water E Florida"},
-    # East Coast - Carolinas
     {"id":"41013","name":"Frying Pan Shoals",         "lat":33.436,"lng":-77.743, "note":"Wilmington NC"},
     {"id":"41025","name":"Diamond Shoals",            "lat":35.010,"lng":-75.402, "note":"Cape Hatteras/OBX"},
     {"id":"41001","name":"East Hatteras",             "lat":34.676,"lng":-72.698, "note":"Offshore Hatteras"},
-    # East Coast - Mid Atlantic
     {"id":"44014","name":"Virginia Beach Offshore",   "lat":36.611,"lng":-74.836, "note":"Virginia Beach"},
     {"id":"44009","name":"Delaware Bay",              "lat":38.461,"lng":-74.703, "note":"Cape May NJ"},
     {"id":"44091","name":"New Jersey Nearshore",      "lat":39.772,"lng":-73.769, "note":"NJ coast"},
     {"id":"44065","name":"NY Bight",                  "lat":40.369,"lng":-73.703, "note":"NY/Rockaway"},
     {"id":"44025","name":"NY Harbor Offshore",        "lat":40.258,"lng":-73.175, "note":"NJ/NY Harbor"},
-    # East Coast - New England
     {"id":"44017","name":"Montauk",                   "lat":40.694,"lng":-72.048, "note":"Long Island/Montauk"},
     {"id":"44008","name":"Nantucket",                 "lat":40.504,"lng":-69.248, "note":"Nantucket/Cape Cod"},
     {"id":"44018","name":"SE Cape Cod",               "lat":41.255,"lng":-69.305, "note":"SE Cape Cod"},
@@ -75,7 +65,7 @@ ALL_BUOYS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Full NOAA tide station database — nearest selected dynamically per request
+# NOAA tide station database — nearest selected dynamically per request
 # ---------------------------------------------------------------------------
 ALL_TIDE_STATIONS = [
     {"id":"9410230","name":"La Jolla CA",           "lat":32.867,"lng":-117.257},
@@ -113,6 +103,27 @@ ALL_TIDE_STATIONS = [
     {"id":"8419317","name":"Portland ME",            "lat":43.657,"lng":-70.247},
     {"id":"8410140","name":"Eastport ME",            "lat":44.904,"lng":-66.985},
 ]
+
+# ---------------------------------------------------------------------------
+# Cron regions — one representative spot per region for hourly pre-compute
+# ---------------------------------------------------------------------------
+CRON_REGIONS = {
+    "sd_ob_pb":      {"name": "San Diego - OB / PB",             "lat": 32.7528, "lng": -117.2553},
+    "sd_la_jolla":   {"name": "San Diego - La Jolla",            "lat": 32.8572, "lng": -117.2567},
+    "sd_encinitas":  {"name": "San Diego - Encinitas / Cardiff", "lat": 33.0367, "lng": -117.2921},
+    "sd_carlsbad":   {"name": "San Diego - Carlsbad / Oceanside","lat": 33.1958, "lng": -117.3800},
+    "oc":            {"name": "Orange County",                    "lat": 33.3828, "lng": -117.5897},
+    "la":            {"name": "Los Angeles",                      "lat": 34.0361, "lng": -118.6789},
+    "ventura_sb":    {"name": "Ventura / Santa Barbara",         "lat": 34.3733, "lng": -119.4756},
+    "monterey":      {"name": "Monterey Bay",                    "lat": 36.9514, "lng": -122.0264},
+    "sf":            {"name": "San Francisco",                   "lat": 37.7594, "lng": -122.5107},
+    "or_central":    {"name": "Central Oregon",                  "lat": 44.6364, "lng": -124.0531},
+    "wa_sw":         {"name": "Southwest Washington",            "lat": 46.9008, "lng": -124.1050},
+    "fl_space_coast":{"name": "Florida Space Coast",             "lat": 28.3200, "lng": -80.6078},
+    "ec_nc":         {"name": "North Carolina",                  "lat": 35.5925, "lng": -75.4658},
+    "ec_nj":         {"name": "New Jersey",                      "lat": 40.1019, "lng": -74.0431},
+    "ec_ne":         {"name": "New England",                     "lat": 41.4614, "lng": -71.4619},
+}
 
 def _haversine(lat1, lng1, lat2, lng2):
     R = 6371
@@ -216,6 +227,9 @@ Notes: [tide warnings, crowd notes, buoy vs model gaps. 2-3 sentences]
 Stars: 5=pumping 4=good 3=decent 2=marginal 1=barely surfable. Convert m to ft (x3.28)."""
 
 
+# ---------------------------------------------------------------------------
+# Data helpers
+# ---------------------------------------------------------------------------
 def fetch_url(url, timeout=10):
     req = urllib.request.Request(url, headers={"User-Agent":"surf-agent/1.0"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -262,18 +276,14 @@ def fetch_openmeteo(spot, target_date, now=False):
 
 
 def pick_nearest_buoys(spots, n=2):
-    """Select n nearest buoys to the centroid of selected spots."""
     lats = [s["lat"] for s in spots if "lat" in s]
     lngs = [s["lng"] for s in spots if "lng" in s]
     if not lats: return ALL_BUOYS[:n]
-    clat = sum(lats)/len(lats)
-    clng = sum(lngs)/len(lngs)
-    sorted_buoys = sorted(ALL_BUOYS, key=lambda b: _haversine(clat, clng, b["lat"], b["lng"]))
-    return sorted_buoys[:n]
+    clat = sum(lats)/len(lats); clng = sum(lngs)/len(lngs)
+    return sorted(ALL_BUOYS, key=lambda b: _haversine(clat, clng, b["lat"], b["lng"]))[:n]
 
 
 def fetch_buoys(spots):
-    """Fetch buoy data from nearest buoys to selected spots."""
     buoys = pick_nearest_buoys(spots, n=2)
     results = []
     for buoy in buoys:
@@ -303,14 +313,11 @@ def fetch_buoys(spots):
 
 
 def pick_tide_station(spots):
-    """Select nearest NOAA tide station to centroid of selected spots."""
     lats = [s["lat"] for s in spots if "lat" in s]
     lngs = [s["lng"] for s in spots if "lng" in s]
     if not lats: return ALL_TIDE_STATIONS[0]["id"]
-    clat = sum(lats)/len(lats)
-    clng = sum(lngs)/len(lngs)
-    nearest = min(ALL_TIDE_STATIONS, key=lambda t: _haversine(clat, clng, t["lat"], t["lng"]))
-    return nearest["id"]
+    clat = sum(lats)/len(lats); clng = sum(lngs)/len(lngs)
+    return min(ALL_TIDE_STATIONS, key=lambda t: _haversine(clat, clng, t["lat"], t["lng"]))["id"]
 
 
 def fetch_tides(target_date, station):
@@ -369,10 +376,14 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
         return json.loads(r.read())["content"][0]["text"]
 
 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
 @app.route("/api/forecast", methods=["GET","OPTIONS"])
 def get_spots():
     if request.method=="OPTIONS": return _cors(jsonify({}))
     return _cors(jsonify({"status":"ok"}))
+
 
 @app.route("/api/forecast", methods=["POST"])
 def get_forecast():
@@ -386,7 +397,7 @@ def get_forecast():
         spots = [s for s in spots_in if "lat" in s and "lng" in s]
         if not spots: return _cors(jsonify({"error":"No valid spots with coordinates"})), 400
 
-        # --- Cache check ---
+        # Cache check
         spot_keys_sorted = sorted(s.get("key","") for s in spots)
         cache_hash = hashlib.md5(",".join(spot_keys_sorted).encode()).hexdigest()[:8]
         window = "now" if now_mode else "dawn"
@@ -398,7 +409,7 @@ def get_forecast():
             if cached:
                 return _cors(jsonify({"result": cached, "cached": True}))
 
-        # --- Live fetch ---
+        # Live fetch
         openmeteo_parts = []
         for spot in spots:
             try: openmeteo_parts.append(fetch_openmeteo(spot, target, now=now_mode))
@@ -414,7 +425,6 @@ def get_forecast():
         spot_names = ", ".join(s.get("key","?") for s in spots)
         result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names, now_mode)
 
-        # Store in cache for 90 minutes
         if cache_available():
             cache_set(cache_key, result, ttl_seconds=5400)
 
@@ -422,11 +432,70 @@ def get_forecast():
     except Exception as e:
         return _cors(jsonify({"error": str(e)})), 500
 
+
+@app.route("/api/cron", methods=["GET","POST"])
+@app.route("/cron", methods=["GET","POST"])
+def run_cron():
+    auth = request.headers.get("Authorization", "")
+    cron_secret = os.environ.get("CRON_SECRET", "")
+    if cron_secret and auth != f"Bearer {cron_secret}":
+        return _cors(jsonify({"error": "Unauthorized"})), 401
+    if not cache_available():
+        return _cors(jsonify({"error": "Redis not configured"})), 500
+
+    now_pt = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
+    targets = [
+        (now_pt + timedelta(days=1), "dawn"),
+        (now_pt, "now"),
+    ]
+
+    west_spot = [{"lat": 32.7528, "lng": -117.2553}]
+    east_spot  = [{"lat": 35.5925, "lng": -75.4658}]
+    try: west_buoys = fetch_buoys(west_spot)
+    except Exception as e: west_buoys = f"Buoys unavailable: {e}"
+    try: east_buoys = fetch_buoys(east_spot)
+    except Exception as e: east_buoys = f"Buoys unavailable: {e}"
+
+    results = {"cached": [], "failed": []}
+
+    for target_date, window in targets:
+        tide_blocks = {}
+        for key, sid in [("west","9410230"),("east","8638610")]:
+            try: tide_blocks[key] = fetch_tides(target_date, sid)
+            except Exception as e: tide_blocks[key] = f"Tides unavailable: {e}"
+
+        for region_key, region_info in CRON_REGIONS.items():
+            date_str = target_date.strftime("%Y-%m-%d")
+            cache_key = f"swell:region:{region_key}:{date_str}:{window}"
+            is_east = region_info["lng"] > -81
+            spot = {"key": region_key, "lat": region_info["lat"],
+                    "lng": region_info["lng"], "name": region_info["name"]}
+            try:
+                om_block   = fetch_openmeteo(spot, target_date, now=(window=="now"))
+                buoy_block = east_buoys if is_east else west_buoys
+                tide_block = tide_blocks["east"] if is_east else tide_blocks["west"]
+                result = call_claude(om_block, buoy_block, tide_block,
+                                     target_date, region_info["name"],
+                                     now_mode=(window=="now"))
+                cache_set(cache_key, result, ttl_seconds=7200)
+                results["cached"].append(cache_key)
+            except Exception as e:
+                results["failed"].append({"key": cache_key, "error": str(e)})
+
+    return _cors(jsonify({
+        "status": "ok",
+        "cached": len(results["cached"]),
+        "failed": len(results["failed"]),
+        "details": results
+    }))
+
+
 def _cors(response):
     response.headers["Access-Control-Allow-Origin"]  = "*"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     return response
+
 
 if __name__ == "__main__":
     app.run(debug=True)
