@@ -74,26 +74,31 @@ def run_cron():
         return jsonify({"error": "Redis not configured"}), 500
 
     # Import forecast functions from index.py
-    from index import fetch_openmeteo, fetch_buoys, fetch_tides, call_claude, pick_tide_station, NOAA_BUOYS
+    from index import fetch_openmeteo, fetch_buoys, fetch_tides, call_claude
 
     now_pt = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
-    # Pre-compute for today (current window) and tomorrow (dawn)
     targets = [
         (now_pt, get_window(now_pt)),
         (now_pt + timedelta(days=1), "dawn"),
     ]
 
-    # Fetch shared data once (buoys + tides are the same for all regions)
-    print("Fetching shared NOAA buoy data...")
+    # Fetch buoys once for west coast and east coast separately
+    west_spot = [{"lat": 32.7528, "lng": -117.2553}]
+    east_spot  = [{"lat": 35.5925, "lng": -75.4658}]
+    print("Fetching NOAA buoy data...")
     try:
-        buoy_block = fetch_buoys()
+        west_buoys = fetch_buoys(west_spot)
     except Exception as e:
-        buoy_block = f"Buoy data unavailable: {e}"
+        west_buoys = f"West buoy data unavailable: {e}"
+    try:
+        east_buoys = fetch_buoys(east_spot)
+    except Exception as e:
+        east_buoys = f"East buoy data unavailable: {e}"
 
-    results = {"cached": [], "failed": [], "skipped": []}
+    results = {"cached": [], "failed": []}
 
     for target_date, window in targets:
-        # Fetch tides for West Coast (La Jolla) and East Coast (VA Beach)
+        # Fetch tides for West Coast and East Coast
         tide_blocks = {}
         for station_key, station_id in [("west", "9410230"), ("east", "8638610")]:
             try:
@@ -103,33 +108,23 @@ def run_cron():
 
         for region_key, region_info in REGIONS.items():
             cache_key = make_cache_key(region_key, target_date, window)
-
-            # Skip if already cached and fresh (< 50 min old)
-            existing = cache_available() and False  # always refresh on cron
-
             spot = {"key": region_key, "lat": region_info["lat"], "lng": region_info["lng"], "name": region_info["name"]}
+            is_east = region_info["lng"] > -81
+            buoy_block = east_buoys if is_east else west_buoys
+            tide_block = tide_blocks["east"] if is_east else tide_blocks["west"]
             is_now = window == "now"
 
             try:
                 print(f"Fetching {region_info['name']} / {window}...")
                 om_block = fetch_openmeteo(spot, target_date, now=is_now)
-
-                # Pick appropriate tide block
-                tide_block = tide_blocks["east"] if region_info["lng"] > -81 else tide_blocks["west"]
-
-                result = call_claude(
-                    om_block, buoy_block, tide_block,
-                    target_date, region_info["name"],
-                    now_mode=is_now
-                )
-
+                result = call_claude(om_block, buoy_block, tide_block,
+                                     target_date, region_info["name"], now_mode=is_now)
                 cache_set(cache_key, result, ttl_seconds=7200)
                 results["cached"].append(cache_key)
-                print(f"  ✓ cached {cache_key}")
-
+                print(f"  OK {cache_key}")
             except Exception as e:
                 results["failed"].append({"key": cache_key, "error": str(e)})
-                print(f"  ✗ {region_key}: {e}")
+                print(f"  FAIL {region_key}: {e}")
 
     return jsonify({
         "status": "ok",
