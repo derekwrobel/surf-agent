@@ -1,6 +1,7 @@
 {
   "routes": [
     { "src": "/api/forecast",  "dest": "/api/index.py" },
+    { "src": "/api/cron",     "dest": "/api/index.py" },
     { "src": "/api/cron-run",  "dest": "/api/index.py" },
     { "src": "/",              "dest": "/index.html"   },
     { "src": "/(.*)",          "dest": "/index.html"   }
