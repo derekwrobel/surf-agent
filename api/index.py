@@ -23,56 +23,60 @@ except Exception:
 # NOAA buoy database — nearest 2 selected dynamically per request
 # ---------------------------------------------------------------------------
 ALL_BUOYS = [
-    {"id":"46258","name":"Mission Bay West",          "lat":32.749,"lng":-117.369,"note":"OB/Mission Beach"},
-    {"id":"46254","name":"Scripps Nearshore",         "lat":32.868,"lng":-117.267,"note":"La Jolla nearshore"},
-    {"id":"46266","name":"Del Mar Nearshore",         "lat":32.957,"lng":-117.279,"note":"Del Mar/Torrey Pines"},
-    {"id":"46274","name":"Leucadia Nearshore",        "lat":33.080,"lng":-117.353,"note":"Encinitas/Leucadia"},
-    {"id":"46224","name":"Oceanside Offshore",        "lat":33.177,"lng":-117.469,"note":"Carlsbad/Oceanside"},
-    {"id":"46232","name":"Point Loma South",          "lat":32.517,"lng":-117.425,"note":"S SD offshore"},
-    {"id":"46235","name":"Imperial Beach Nearshore",  "lat":32.494,"lng":-117.422,"note":"IB/Coronado"},
-    {"id":"46086","name":"San Clemente Island",       "lat":32.491,"lng":-118.046,"note":"S/SW swell approach SD"},
-    {"id":"46025","name":"Santa Monica Basin",        "lat":33.749,"lng":-119.053,"note":"NW swell approach SoCal"},
-    {"id":"46285","name":"Capistrano Beach Nearshore","lat":33.428,"lng":-117.666,"note":"Dana Point/OC"},
-    {"id":"46253","name":"San Pedro South",           "lat":33.518,"lng":-118.186,"note":"OC offshore"},
-    {"id":"46222","name":"San Pedro",                 "lat":33.618,"lng":-118.317,"note":"Long Beach/San Pedro"},
-    {"id":"46221","name":"Santa Monica Bay",          "lat":33.860,"lng":-118.641,"note":"LA/Santa Monica"},
-    {"id":"46069","name":"S Santa Barbara Basin",    "lat":34.259,"lng":-120.671,"note":"Ventura/SB offshore"},
-    {"id":"46054","name":"West Santa Barbara",        "lat":34.274,"lng":-120.459,"note":"Santa Barbara"},
-    {"id":"46011","name":"Santa Maria",               "lat":34.956,"lng":-120.998,"note":"Central Coast/SLO"},
-    {"id":"46215","name":"Morro Bay Offshore",        "lat":35.204,"lng":-120.859,"note":"Morro Bay/Pismo"},
-    {"id":"46028","name":"Cape San Martin",           "lat":35.741,"lng":-121.903,"note":"Big Sur"},
-    {"id":"46042","name":"Monterey",                  "lat":36.785,"lng":-122.469,"note":"Monterey Bay"},
-    {"id":"46013","name":"Bodega Bay",                "lat":38.241,"lng":-123.301,"note":"Bodega Bay"},
-    {"id":"46026","name":"San Francisco",             "lat":37.750,"lng":-122.838,"note":"SF/Ocean Beach"},
-    {"id":"46236","name":"Point Reyes",               "lat":37.907,"lng":-123.470,"note":"Point Reyes NorCal"},
-    {"id":"46014","name":"Point Arena",               "lat":39.235,"lng":-123.974,"note":"Mendocino"},
-    {"id":"46022","name":"Eel River",                 "lat":40.716,"lng":-124.540,"note":"Eureka/NorCal"},
-    {"id":"46027","name":"St. George",                "lat":41.849,"lng":-124.381,"note":"Crescent City/OR border"},
-    {"id":"46015","name":"Port Orford",               "lat":42.754,"lng":-124.839,"note":"S Oregon"},
-    {"id":"46229","name":"Umpqua Offshore",           "lat":43.772,"lng":-124.549,"note":"Coos Bay/Central OR"},
-    {"id":"46050","name":"Stonewall Bank",            "lat":44.679,"lng":-124.535,"note":"Newport/Central OR"},
-    {"id":"46089","name":"Tillamook",                 "lat":45.928,"lng":-125.815,"note":"N Oregon/Tillamook"},
-    {"id":"46029","name":"Columbia River Bar",        "lat":46.148,"lng":-124.508,"note":"Columbia River/Seaside"},
-    {"id":"46041","name":"Cape Elizabeth",            "lat":47.353,"lng":-124.731,"note":"WA coast/Westport"},
-    {"id":"46087","name":"Neah Bay",                  "lat":48.494,"lng":-124.726,"note":"NW Washington"},
-    {"id":"41009","name":"Canaveral 20NM",            "lat":28.508,"lng":-80.185, "note":"Cape Canaveral/Space Coast"},
-    {"id":"41010","name":"Canaveral 120NM",           "lat":28.906,"lng":-78.471, "note":"E Florida offshore"},
-    {"id":"41112","name":"NE Florida Nearshore",      "lat":30.709,"lng":-81.292, "note":"Jacksonville/NE FL"},
-    {"id":"41047","name":"NE Bahamas",                "lat":27.513,"lng":-71.490, "note":"Deep water E Florida"},
-    {"id":"41013","name":"Frying Pan Shoals",         "lat":33.436,"lng":-77.743, "note":"Wilmington NC"},
-    {"id":"41025","name":"Diamond Shoals",            "lat":35.010,"lng":-75.402, "note":"Cape Hatteras/OBX"},
-    {"id":"41001","name":"East Hatteras",             "lat":34.676,"lng":-72.698, "note":"Offshore Hatteras"},
-    {"id":"44014","name":"Virginia Beach Offshore",   "lat":36.611,"lng":-74.836, "note":"Virginia Beach"},
-    {"id":"44009","name":"Delaware Bay",              "lat":38.461,"lng":-74.703, "note":"Cape May NJ"},
-    {"id":"44091","name":"New Jersey Nearshore",      "lat":39.772,"lng":-73.769, "note":"NJ coast"},
-    {"id":"44065","name":"NY Bight",                  "lat":40.369,"lng":-73.703, "note":"NY/Rockaway"},
-    {"id":"44025","name":"NY Harbor Offshore",        "lat":40.258,"lng":-73.175, "note":"NJ/NY Harbor"},
-    {"id":"44017","name":"Montauk",                   "lat":40.694,"lng":-72.048, "note":"Long Island/Montauk"},
-    {"id":"44008","name":"Nantucket",                 "lat":40.504,"lng":-69.248, "note":"Nantucket/Cape Cod"},
-    {"id":"44018","name":"SE Cape Cod",               "lat":41.255,"lng":-69.305, "note":"SE Cape Cod"},
-    {"id":"44013","name":"Boston",                    "lat":42.346,"lng":-70.651, "note":"Boston/MA Coast"},
-    {"id":"44007","name":"Portland",                  "lat":43.525,"lng":-70.141, "note":"Maine coast"},
-    {"id":"44027","name":"Jonesport",                 "lat":44.279,"lng":-67.307, "note":"Downeast Maine"},
+    # West Coast — nearshore (close to shore, reads local conditions)
+    {"id":"46258","name":"Mission Bay West",          "lat":32.749,"lng":-117.369,"note":"OB/Mission Beach",         "offshore":False},
+    {"id":"46254","name":"Scripps Nearshore",         "lat":32.868,"lng":-117.267,"note":"La Jolla nearshore",       "offshore":False},
+    {"id":"46266","name":"Del Mar Nearshore",         "lat":32.957,"lng":-117.279,"note":"Del Mar/Torrey Pines",     "offshore":False},
+    {"id":"46274","name":"Leucadia Nearshore",        "lat":33.080,"lng":-117.353,"note":"Encinitas/Leucadia",       "offshore":False},
+    {"id":"46235","name":"Imperial Beach Nearshore",  "lat":32.494,"lng":-117.422,"note":"IB/Coronado",              "offshore":False},
+    {"id":"46285","name":"Capistrano Beach Nearshore","lat":33.428,"lng":-117.666,"note":"Dana Point/OC",            "offshore":False},
+    {"id":"46221","name":"Santa Monica Bay",          "lat":33.860,"lng":-118.641,"note":"LA/Santa Monica",          "offshore":False},
+    {"id":"46054","name":"West Santa Barbara",        "lat":34.274,"lng":-120.459,"note":"Santa Barbara",            "offshore":False},
+    {"id":"46215","name":"Morro Bay Offshore",        "lat":35.204,"lng":-120.859,"note":"Morro Bay/Pismo",          "offshore":False},
+    {"id":"46026","name":"San Francisco",             "lat":37.750,"lng":-122.838,"note":"SF/Ocean Beach",           "offshore":False},
+    {"id":"46029","name":"Columbia River Bar",        "lat":46.148,"lng":-124.508,"note":"Columbia River/Seaside",   "offshore":False},
+    {"id":"41112","name":"NE Florida Nearshore",      "lat":30.709,"lng":-81.292, "note":"Jacksonville/NE FL",       "offshore":False},
+    {"id":"44091","name":"New Jersey Nearshore",      "lat":39.772,"lng":-73.769, "note":"NJ coast",                 "offshore":False},
+    {"id":"44065","name":"NY Bight",                  "lat":40.369,"lng":-73.703, "note":"NY/Rockaway",              "offshore":False},
+    {"id":"44013","name":"Boston",                    "lat":42.346,"lng":-70.651, "note":"Boston/MA Coast",          "offshore":False},
+    {"id":"44007","name":"Portland",                  "lat":43.525,"lng":-70.141, "note":"Maine coast",              "offshore":False},
+    # West Coast — offshore (deeper water, sees incoming swell earlier)
+    {"id":"46086","name":"San Clemente Island",       "lat":32.491,"lng":-118.046,"note":"S/SW swell approach SD",   "offshore":True},
+    {"id":"46025","name":"Santa Monica Basin",        "lat":33.749,"lng":-119.053,"note":"NW swell approach SoCal",  "offshore":True},
+    {"id":"46224","name":"Oceanside Offshore",        "lat":33.177,"lng":-117.469,"note":"Carlsbad/Oceanside",       "offshore":True},
+    {"id":"46232","name":"Point Loma South",          "lat":32.517,"lng":-117.425,"note":"S SD offshore",            "offshore":True},
+    {"id":"46253","name":"San Pedro South",           "lat":33.518,"lng":-118.186,"note":"OC offshore",              "offshore":True},
+    {"id":"46222","name":"San Pedro",                 "lat":33.618,"lng":-118.317,"note":"Long Beach/San Pedro",     "offshore":True},
+    {"id":"46069","name":"S Santa Barbara Basin",     "lat":34.259,"lng":-120.671,"note":"Ventura/SB offshore",      "offshore":True},
+    {"id":"46011","name":"Santa Maria",               "lat":34.956,"lng":-120.998,"note":"Central Coast/SLO",        "offshore":True},
+    {"id":"46028","name":"Cape San Martin",           "lat":35.741,"lng":-121.903,"note":"Big Sur",                  "offshore":True},
+    {"id":"46042","name":"Monterey",                  "lat":36.785,"lng":-122.469,"note":"Monterey Bay",             "offshore":True},
+    {"id":"46236","name":"Point Reyes",               "lat":37.907,"lng":-123.470,"note":"Point Reyes NorCal",       "offshore":True},
+    {"id":"46013","name":"Bodega Bay",                "lat":38.241,"lng":-123.301,"note":"Bodega Bay",               "offshore":True},
+    {"id":"46014","name":"Point Arena",               "lat":39.235,"lng":-123.974,"note":"Mendocino",                "offshore":True},
+    {"id":"46022","name":"Eel River",                 "lat":40.716,"lng":-124.540,"note":"Eureka/NorCal",            "offshore":True},
+    {"id":"46027","name":"St. George",                "lat":41.849,"lng":-124.381,"note":"Crescent City/OR border",  "offshore":True},
+    {"id":"46015","name":"Port Orford",               "lat":42.754,"lng":-124.839,"note":"S Oregon",                 "offshore":True},
+    {"id":"46229","name":"Umpqua Offshore",           "lat":43.772,"lng":-124.549,"note":"Coos Bay/Central OR",      "offshore":True},
+    {"id":"46050","name":"Stonewall Bank",            "lat":44.679,"lng":-124.535,"note":"Newport/Central OR",       "offshore":True},
+    {"id":"46089","name":"Tillamook",                 "lat":45.928,"lng":-125.815,"note":"N Oregon/Tillamook",       "offshore":True},
+    {"id":"46041","name":"Cape Elizabeth",            "lat":47.353,"lng":-124.731,"note":"WA coast/Westport",        "offshore":True},
+    {"id":"46087","name":"Neah Bay",                  "lat":48.494,"lng":-124.726,"note":"NW Washington",            "offshore":True},
+    # East Coast — offshore
+    {"id":"41010","name":"Canaveral 120NM",           "lat":28.906,"lng":-78.471, "note":"E Florida offshore",       "offshore":True},
+    {"id":"41047","name":"NE Bahamas",                "lat":27.513,"lng":-71.490, "note":"Deep water E Florida",     "offshore":True},
+    {"id":"41013","name":"Frying Pan Shoals",         "lat":33.436,"lng":-77.743, "note":"Wilmington NC",            "offshore":True},
+    {"id":"41025","name":"Diamond Shoals",            "lat":35.010,"lng":-75.402, "note":"Cape Hatteras/OBX",        "offshore":True},
+    {"id":"41001","name":"East Hatteras",             "lat":34.676,"lng":-72.698, "note":"Offshore Hatteras",        "offshore":True},
+    {"id":"44014","name":"Virginia Beach Offshore",   "lat":36.611,"lng":-74.836, "note":"Virginia Beach",           "offshore":True},
+    {"id":"44009","name":"Delaware Bay",              "lat":38.461,"lng":-74.703, "note":"Cape May NJ",              "offshore":True},
+    {"id":"44025","name":"NY Harbor Offshore",        "lat":40.258,"lng":-73.175, "note":"NJ/NY Harbor",             "offshore":True},
+    {"id":"44017","name":"Montauk",                   "lat":40.694,"lng":-72.048, "note":"Long Island/Montauk",      "offshore":True},
+    {"id":"44008","name":"Nantucket",                 "lat":40.504,"lng":-69.248, "note":"Nantucket/Cape Cod",       "offshore":True},
+    {"id":"44018","name":"SE Cape Cod",               "lat":41.255,"lng":-69.305, "note":"SE Cape Cod",              "offshore":True},
+    {"id":"44027","name":"Jonesport",                 "lat":44.279,"lng":-67.307, "note":"Downeast Maine",           "offshore":True},
+    # East Coast — nearshore
+    {"id":"41009","name":"Canaveral 20NM",            "lat":28.508,"lng":-80.185, "note":"Cape Canaveral/Space Coast","offshore":False},
 ]
 
 # ---------------------------------------------------------------------------
@@ -303,52 +307,71 @@ def fetch_openmeteo(spot, target_date, target_hour):
     return f"{name}:\n" + "\n".join(lines)
 
 
-def pick_nearest_buoys(spots, n=2):
-    lats = [s["lat"] for s in spots if "lat" in s]
-    lngs = [s["lng"] for s in spots if "lng" in s]
-    if not lats: return ALL_BUOYS[:n]
-    clat = sum(lats)/len(lats); clng = sum(lngs)/len(lngs)
-    return sorted(ALL_BUOYS, key=lambda b: _haversine(clat, clng, b["lat"], b["lng"]))[:n]
+def pick_nearest_buoys_for_spot(spot):
+    """Return [nearest_nearshore, nearest_offshore] for this spot."""
+    lat, lng = spot["lat"], spot["lng"]
+    by_dist = sorted(ALL_BUOYS, key=lambda b: _haversine(lat, lng, b["lat"], b["lng"]))
+    nearshore = next((b for b in by_dist if not b["offshore"]), None)
+    offshore  = next((b for b in by_dist if b["offshore"]),  None)
+    # Deduplicate in case the same buoy is nearest in both categories
+    if nearshore and offshore and nearshore["id"] == offshore["id"]:
+        offshore = next((b for b in by_dist if b["offshore"] and b["id"] != nearshore["id"]), None)
+    return [b for b in [nearshore, offshore] if b]
 
 
-def fetch_buoys(spots):
-    buoys = pick_nearest_buoys(spots, n=2)
-    results = []
-    for buoy in buoys:
-        try:
-            text = fetch_url(f"https://www.ndbc.noaa.gov/data/realtime2/{buoy['id']}.txt")
-            lines = text.strip().splitlines()
-            header = lines[0].lstrip("#").split()
-            rows = [l for l in lines[2:] if not l.startswith("#")][:5]
-            readings = []
-            for row in rows:
-                cols = row.split()
-                if len(cols) < len(header): continue
-                d = dict(zip(header, cols))
-                wvht=d.get("WVHT","MM"); dpd=d.get("DPD","MM"); mwd=d.get("MWD","MM")
-                wspd=d.get("WSPD","MM"); wdir_b=d.get("WDIR","MM")
-                mo=d.get("MM","?"); dy=d.get("DD","?"); hh=d.get("hh","?"); mm_t=d.get("mm","?")
-                if wvht=="MM" or dpd=="MM": continue
-                ft = float(wvht)*3.28084
-                readings.append(f"  {mo}/{dy} {hh}:{mm_t}Z - {ft:.1f}ft @ {dpd}s from {mwd}deg | wind {wspd}mph/{wdir_b}deg")
-            if readings:
-                results.append(f"Buoy {buoy['id']} ({buoy['name']}) - {buoy['note']}:\n" + "\n".join(readings[:3]))
-            else:
-                results.append(f"Buoy {buoy['id']} ({buoy['name']}): no recent wave data")
-        except Exception as e:
-            results.append(f"Buoy {buoy['id']} ({buoy['name']}): error - {e}")
-    return "\n\n".join(results)
+def pick_tide_station_for_spot(spot):
+    lat, lng = spot["lat"], spot["lng"]
+    return min(ALL_TIDE_STATIONS, key=lambda t: _haversine(lat, lng, t["lat"], t["lng"]))["id"]
 
 
-def pick_tide_station(spots):
-    lats = [s["lat"] for s in spots if "lat" in s]
-    lngs = [s["lng"] for s in spots if "lng" in s]
-    if not lats: return ALL_TIDE_STATIONS[0]["id"]
-    clat = sum(lats)/len(lats); clng = sum(lngs)/len(lngs)
-    return min(ALL_TIDE_STATIONS, key=lambda t: _haversine(clat, clng, t["lat"], t["lng"]))["id"]
+_BUOY_CACHE_TTL = 7200  # 2 hours — matches buoy update frequency
+
+def _buoy_cache_key(buoy_id):
+    return f"swell:buoy:{buoy_id}"
+
+def _parse_buoy(buoy, raw_text):
+    """Parse NOAA realtime2 text into a readable string."""
+    lines = raw_text.strip().splitlines()
+    header = lines[0].lstrip("#").split()
+    rows = [l for l in lines[2:] if not l.startswith("#")][:5]
+    readings = []
+    for row in rows:
+        cols = row.split()
+        if len(cols) < len(header): continue
+        d = dict(zip(header, cols))
+        wvht=d.get("WVHT","MM"); dpd=d.get("DPD","MM"); mwd=d.get("MWD","MM")
+        wspd=d.get("WSPD","MM"); wdir_b=d.get("WDIR","MM")
+        mo=d.get("MM","?"); dy=d.get("DD","?"); hh=d.get("hh","?"); mm_t=d.get("mm","?")
+        if wvht=="MM" or dpd=="MM": continue
+        ft = float(wvht)*3.28084
+        readings.append(f"  {mo}/{dy} {hh}:{mm_t}Z - {ft:.1f}ft @ {dpd}s from {mwd}deg | wind {wspd}mph/{wdir_b}deg")
+    if readings:
+        return f"Buoy {buoy['id']} ({buoy['name']}) - {buoy['note']}:\n" + "\n".join(readings[:3])
+    return f"Buoy {buoy['id']} ({buoy['name']}): no recent wave data"
+
+def _get_buoy(buoy):
+    """Return buoy reading string — Redis cache first, live NOAA fetch on miss."""
+    ck = _buoy_cache_key(buoy["id"])
+    if cache_available():
+        cached = cache_get(ck)
+        if cached:
+            return cached
+    try:
+        raw = fetch_url(f"https://www.ndbc.noaa.gov/data/realtime2/{buoy['id']}.txt")
+        result = _parse_buoy(buoy, raw)
+    except Exception as e:
+        result = f"Buoy {buoy['id']} ({buoy['name']}): error - {e}"
+    if cache_available():
+        cache_set(ck, result, ttl_seconds=_BUOY_CACHE_TTL)
+    return result
+
+def fetch_buoys_for_spot(spot):
+    """Return cached buoy data for the 2 nearest buoys to this spot."""
+    buoys = pick_nearest_buoys_for_spot(spot, n=2)
+    return "\n\n".join(_get_buoy(b) for b in buoys)
 
 
-def fetch_tides(target_date, station):
+def fetch_tides(target_date, station, target_hour=6):
     date_str = target_date.strftime("%Y%m%d")
     base = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter"
     def get(interval):
@@ -363,10 +386,10 @@ def fetch_tides(target_date, station):
     except Exception as e:
         return f"Tides: error - {e}"
 
-    dawn_lines=[]; hilo_lines=[]; lows=[]
+    session_lines=[]; hilo_lines=[]; lows=[]
     for p in hourly:
-        t=p.get("t",""); v=float(p.get("v",0)); hour=int(t[11:13]) if len(t)>=13 else -1
-        if 5<=hour<=8: dawn_lines.append(f"  {t[11:16]}: {v:+.2f}ft")
+        t=p.get("t",""); v=float(p.get("v",0)); h=int(t[11:13]) if len(t)>=13 else -1
+        if target_hour <= h <= target_hour+3: session_lines.append(f"  {t[11:16]}: {v:+.2f}ft")
     for p in hilo:
         t=p.get("t",""); v=float(p.get("v",0)); kind="HIGH" if p.get("type")=="H" else "LOW "
         hilo_lines.append(f"  {kind} {t[11:16]}: {v:+.2f}ft")
@@ -376,9 +399,10 @@ def fetch_tides(target_date, station):
     if any(l<=-1.2 for l in lows):
         warning=f"\n  EXTREME LOW TIDE ({min(lows):+.2f}ft) - skip Avalanche south side, OB pier north sandbar"
 
+    session_label = f"{target_hour:02d}:00–{target_hour+3:02d}:00"
     out=[f"NOAA Tides (station {station}), {target_date.strftime('%A %b')} {target_date.day}:"]
     if hilo_lines: out.append("  Hi/Lo:"); out.extend(hilo_lines)
-    if dawn_lines: out.append("  Dawn (5-8AM):"); out.extend(dawn_lines)
+    if session_lines: out.append(f"  Session ({session_label}):"); out.extend(session_lines)
     if warning: out.append(warning)
     return "\n".join(out)
 
@@ -407,10 +431,21 @@ def _spot_cache_key(spot_key, date_str, hour):
     return f"swell:spot:{h}:{date_str}:{hour:02d}"
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_name, spot_key, now_mode=False):
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_name, spot_key, target_hour=6):
     api_key = os.environ.get("ANTHROPIC_API_KEY","")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
-    mode_str = "RIGHT NOW (next 3 hours)" if now_mode else f"dawn patrol on {date_label}"
+    # Build a human-readable session label based on the actual requested hour
+    if target_hour < 7:
+        session = "dawn patrol"
+    elif target_hour < 12:
+        session = "morning session"
+    elif target_hour < 15:
+        session = "midday session"
+    elif target_hour < 18:
+        session = "afternoon session"
+    else:
+        session = "evening session"
+    mode_str = f"{session} ({target_hour:02d}:00 local) on {date_label}"
     knowledge = _format_spot_knowledge([spot_key])
     knowledge_block = f"\n\nSPOT LOCAL KNOWLEDGE:\n{knowledge}" if knowledge else ""
 
@@ -432,14 +467,25 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_name,
         return json.loads(r.read())["content"][0]["text"]
 
 
-def _forecast_one_spot(spot, target_date, target_hour, buoy_block, tide_block):
-    """Fetch Open-Meteo and call Claude for a single spot. Returns (key, result)."""
+def _forecast_one_spot(spot, target_date, target_hour, tide_cache=None):
+    """Fetch Open-Meteo, nearest buoys, and tides for a single spot. Returns (key, result)."""
     key = spot.get("key", "")
     name = spot.get("name") or key
     try:
         om_block = fetch_openmeteo(spot, target_date, target_hour)
-        now_mode = False  # hour-based forecasts are always time-specific, not live
-        result = call_claude(om_block, buoy_block, tide_block, target_date, name, key, now_mode)
+        buoy_block = fetch_buoys_for_spot(spot)
+        # Tide: use shared cache dict if provided (avoids duplicate station fetches)
+        tide_station = pick_tide_station_for_spot(spot)
+        if tide_cache is not None:
+            cache_key_t = f"{tide_station}:{target_date.strftime('%Y-%m-%d')}:{target_hour:02d}"
+            if cache_key_t not in tide_cache:
+                try: tide_cache[cache_key_t] = fetch_tides(target_date, tide_station, target_hour)
+                except Exception as e: tide_cache[cache_key_t] = f"Tides unavailable: {e}"
+            tide_block = tide_cache[cache_key_t]
+        else:
+            try: tide_block = fetch_tides(target_date, tide_station, target_hour)
+            except Exception as e: tide_block = f"Tides unavailable: {e}"
+        result = call_claude(om_block, buoy_block, tide_block, target_date, name, key, target_hour)
         return key, result
     except Exception as e:
         return key, f"**{name}** — error: {e}"
@@ -496,15 +542,10 @@ def get_forecast():
                 spots_to_fetch.append(spot)
 
         if spots_to_fetch:
-            try: buoy_block = fetch_buoys(spots_to_fetch)
-            except Exception as e: buoy_block = f"Buoy data unavailable: {e}"
-            tide_station = pick_tide_station(spots_to_fetch)
-            try: tide_block = fetch_tides(target_dt, tide_station)
-            except Exception as e: tide_block = f"Tide data unavailable: {e}"
-
+            tide_cache = {}
             with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
                 futs = {
-                    ex.submit(_forecast_one_spot, spot, target_dt, target_hour, buoy_block, tide_block): spot
+                    ex.submit(_forecast_one_spot, spot, target_dt, target_hour, tide_cache): spot
                     for spot in spots_to_fetch
                 }
                 for fut in concurrent.futures.as_completed(futs):
@@ -543,23 +584,21 @@ def run_cron():
         for hour in [5, 6, 7, 8]
     ]
 
-    # Pre-fetch buoy data once per coast
-    west_spot = [{"lat": 32.7528, "lng": -117.2553}]
-    east_spot = [{"lat": 35.5925, "lng": -75.4658}]
-    try: west_buoys = fetch_buoys(west_spot)
-    except Exception as e: west_buoys = f"Buoys unavailable: {e}"
-    try: east_buoys = fetch_buoys(east_spot)
-    except Exception as e: east_buoys = f"Buoys unavailable: {e}"
+    # Step 1: Refresh all buoy data into Redis (fast — small HTTP, no Claude)
+    buoys_refreshed = 0
+    for buoy in ALL_BUOYS:
+        ck = _buoy_cache_key(buoy["id"])
+        if not cache_get(ck):  # only fetch if stale/missing
+            try:
+                raw = fetch_url(f"https://www.ndbc.noaa.gov/data/realtime2/{buoy['id']}.txt")
+                result = _parse_buoy(buoy, raw)
+                cache_set(ck, result, ttl_seconds=_BUOY_CACHE_TTL)
+                buoys_refreshed += 1
+            except Exception:
+                pass  # buoy may be offline; skip silently
 
-    # Pre-fetch tide data per station+date (cached locally to avoid repeat calls)
+    # Shared tide cache for this cron run (avoids duplicate station fetches)
     tide_cache_local = {}
-    def get_tide(spot_list, tgt_date):
-        sid = pick_tide_station(spot_list)
-        cache_key_t = f"{sid}:{tgt_date.strftime('%Y-%m-%d')}"
-        if cache_key_t not in tide_cache_local:
-            try: tide_cache_local[cache_key_t] = fetch_tides(tgt_date, sid)
-            except Exception as e: tide_cache_local[cache_key_t] = f"Tides unavailable: {e}"
-        return tide_cache_local[cache_key_t]
 
     # Build full spot list from knowledge base (has lat/lng for every spot)
     all_spots = [
@@ -576,10 +615,6 @@ def run_cron():
         if len(results["cached"]) >= MAX_PER_RUN:
             break
 
-        is_east    = spot["lng"] > -81
-        tz_name    = "America/New_York" if is_east else "America/Los_Angeles"
-        buoy_block = east_buoys if is_east else west_buoys
-
         for target_date, hour in CRON_TARGETS:
             if len(results["cached"]) >= MAX_PER_RUN:
                 break
@@ -592,10 +627,16 @@ def run_cron():
                 continue
 
             try:
-                tide_block = get_tide([spot], target_date)
+                buoy_block = fetch_buoys_for_spot(spot)
+                tide_station = pick_tide_station_for_spot(spot)
+                tide_key = f"{tide_station}:{date_str}:{hour:02d}"
+                if tide_key not in tide_cache_local:
+                    try: tide_cache_local[tide_key] = fetch_tides(target_date, tide_station, hour)
+                    except Exception as e: tide_cache_local[tide_key] = f"Tides unavailable: {e}"
+                tide_block = tide_cache_local[tide_key]
                 om_block   = fetch_openmeteo(spot, target_date, hour)
                 result     = call_claude(om_block, buoy_block, tide_block,
-                                       target_date, spot["name"], spot["key"], now_mode=False)
+                                       target_date, spot["name"], spot["key"], hour)
                 cache_set(ck, result, ttl_seconds=345600)
                 results["cached"].append(f"{spot['key']}:{date_str}:{hour:02d}")
             except Exception as e:
@@ -603,9 +644,10 @@ def run_cron():
 
     return _cors(jsonify({
         "status": "ok",
-        "cached": len(results["cached"]),
-        "skipped": len(results["skipped"]),
-        "failed":  len(results["failed"]),
+        "buoys_refreshed": buoys_refreshed,
+        "spots_cached": len(results["cached"]),
+        "spots_skipped": len(results["skipped"]),
+        "spots_failed":  len(results["failed"]),
         "details": results,
     }))
 
