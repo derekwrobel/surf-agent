@@ -277,7 +277,10 @@ function onAuthed() {
 // Admin panel
 function openAdmin()  { document.getElementById("admin-panel").style.display = "block"; if (window.location.hash !== "#admin") history.pushState(null,"","#admin"); }
 function closeAdmin() { document.getElementById("admin-panel").style.display = "none"; history.pushState(null,"","#"); }
-if (window.location.hash === "#admin") openAdmin();
+if (window.location.hash === "#admin") {
+  document.getElementById("auth-screen").style.display = "none";
+  openAdmin();
+}
 
 async function loadAdminUsers() {
   const pw  = document.getElementById("admin-pw").value;
