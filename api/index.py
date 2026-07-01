@@ -248,11 +248,15 @@ EAST COAST:
 - Ruggles RI: SE/E swell; handles biggest hurricane surf on EC; experts only
 - East Coast general: needs hurricane swell (summer/fall) or nor'easters (fall/winter) for quality
 
-Output format for a SINGLE SPOT — use exactly this structure:
+Output format for a SINGLE SPOT — follow this EXACTLY, no deviations:
 
-**[Spot Name]** ★★★☆☆ X.X
-[height ft] | [period]s | [dir]deg swell | wind [speed]mph [dir]deg | tide [ft]
-[One to two sentences — cross-reference buoy vs model, note tide and wind impact]
+Line 1: **[Spot Name]** ★★★☆☆ X.X   (bold name, then stars, then numeric rating — nothing else)
+Line 2: [height ft] | [period]s | [dir]deg swell | wind [speed]mph [dir]deg | tide [ft]
+Line 3+: [assessment sentences]
+
+Rules:
+- Do NOT use markdown headings (##). Do NOT add date/time labels. Do NOT repeat the spot name after line 1.
+- Line 1 must start with **Name** and end with the numeric rating (e.g. 3.0, 4.5).
 
 Star ratings are ABSOLUTE. Half-point increments allowed (e.g. 3.5, 4.5):
 - 5: Pumping — 4ft+ with 12s+ groundswell, offshore winds, good tide.
