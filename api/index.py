@@ -3,11 +3,78 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from flask import Flask, request, jsonify
 import json, urllib.request, urllib.parse, zoneinfo, hashlib, math as _math
-import concurrent.futures
+import concurrent.futures, secrets, hmac
 from datetime import datetime, timedelta
 from cache import cache_get, cache_set, cache_available
 
 app = Flask(__name__)
+
+# ---------------------------------------------------------------------------
+# Auth helpers
+# ---------------------------------------------------------------------------
+_ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+_SESSION_TTL    = 60 * 60 * 24 * 30  # 30 days
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_hex(16)
+    h    = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000)
+    return f"{salt}:{h.hex()}"
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        salt, h = stored.split(":", 1)
+        expected = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000)
+        return hmac.compare_digest(expected.hex(), h)
+    except Exception:
+        return False
+
+def _user_key(email: str) -> str:
+    return f"auth:user:{email.lower().strip()}"
+
+def _session_key(token: str) -> str:
+    return f"auth:session:{token}"
+
+def _get_session_email(req) -> str | None:
+    """Return email for valid session token in Authorization header or cookie."""
+    token = None
+    auth  = req.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:].strip()
+    if not token:
+        token = req.cookies.get("surf_session")
+    if not token:
+        return None
+    return cache_get(_session_key(token))
+
+def _require_auth(req):
+    """Return (email, None) or (None, error_response)."""
+    email = _get_session_email(req)
+    if not email:
+        return None, (_cors(jsonify({"error": "unauthorized"})), 401)
+    user = cache_get(_user_key(email))
+    if not user:
+        return None, (_cors(jsonify({"error": "unauthorized"})), 401)
+    try:
+        u = json.loads(user)
+    except Exception:
+        return None, (_cors(jsonify({"error": "unauthorized"})), 401)
+    if u.get("status") != "approved":
+        return None, (_cors(jsonify({"error": "account_pending"})), 403)
+    return email, None
+
+def _require_admin(req):
+    """Return (True, None) or (None, error_response). Admin uses Basic auth."""
+    auth = req.headers.get("Authorization", "")
+    if auth.startswith("Basic "):
+        import base64
+        try:
+            decoded = base64.b64decode(auth[6:]).decode()
+            _, pw   = decoded.split(":", 1)
+            if _ADMIN_PASSWORD and hmac.compare_digest(pw, _ADMIN_PASSWORD):
+                return True, None
+        except Exception:
+            pass
+    return None, (_cors(jsonify({"error": "unauthorized"})), 401)
 
 # ---------------------------------------------------------------------------
 # Spot knowledge base
@@ -493,7 +560,150 @@ def _forecast_one_spot(spot, target_date, target_hour, tide_cache=None):
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# Routes — auth
+# ---------------------------------------------------------------------------
+@app.route("/api/auth/register", methods=["POST","OPTIONS"])
+def auth_register():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    body     = request.get_json(force=True) or {}
+    email    = (body.get("email") or "").lower().strip()
+    password = body.get("password") or ""
+    name     = (body.get("name") or "").strip()
+    if not email or not password or not name:
+        return _cors(jsonify({"error": "name, email, and password are required"})), 400
+    if len(password) < 8:
+        return _cors(jsonify({"error": "password must be at least 8 characters"})), 400
+    uk = _user_key(email)
+    existing = cache_get(uk)
+    if existing:
+        return _cors(jsonify({"error": "email already registered"})), 409
+    user = {"email": email, "name": name, "password_hash": _hash_password(password),
+            "status": "pending", "created_at": datetime.utcnow().isoformat()}
+    cache_set(uk, json.dumps(user), ttl_seconds=None)
+    # Track email in an index so admin can list all users
+    idx = cache_get("auth:users:index") or "[]"
+    try: emails = json.loads(idx)
+    except Exception: emails = []
+    if email not in emails:
+        emails.append(email)
+        cache_set("auth:users:index", json.dumps(emails), ttl_seconds=None)
+    return _cors(jsonify({"status": "pending"})), 201
+
+
+@app.route("/api/auth/login", methods=["POST","OPTIONS"])
+def auth_login():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    body     = request.get_json(force=True) or {}
+    email    = (body.get("email") or "").lower().strip()
+    password = body.get("password") or ""
+    uk       = _user_key(email)
+    raw      = cache_get(uk)
+    if not raw:
+        return _cors(jsonify({"error": "invalid credentials"})), 401
+    try:
+        u = json.loads(raw)
+    except Exception:
+        return _cors(jsonify({"error": "invalid credentials"})), 401
+    if not _verify_password(password, u.get("password_hash", "")):
+        return _cors(jsonify({"error": "invalid credentials"})), 401
+    if u.get("status") != "approved":
+        return _cors(jsonify({"error": "account_pending"})), 403
+    token = secrets.token_urlsafe(32)
+    cache_set(_session_key(token), email, ttl_seconds=_SESSION_TTL)
+    resp = _cors(jsonify({"token": token, "name": u.get("name", "")}))
+    resp.set_cookie("surf_session", token, max_age=_SESSION_TTL, httponly=True,
+                    samesite="Lax", secure=True)
+    return resp
+
+
+@app.route("/api/auth/logout", methods=["POST","OPTIONS"])
+def auth_logout():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    token = None
+    auth  = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "): token = auth[7:].strip()
+    if not token: token = request.cookies.get("surf_session")
+    if token: cache_set(_session_key(token), "", ttl_seconds=1)  # expire immediately
+    resp = _cors(jsonify({"status": "ok"}))
+    resp.delete_cookie("surf_session")
+    return resp
+
+
+@app.route("/api/auth/me", methods=["GET","OPTIONS"])
+def auth_me():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    email, err = _require_auth(request)
+    if err: return err
+    raw = cache_get(_user_key(email))
+    try:
+        u = json.loads(raw)
+        return _cors(jsonify({"email": email, "name": u.get("name", ""), "status": u.get("status")}))
+    except Exception:
+        return _cors(jsonify({"error": "unauthorized"})), 401
+
+
+# ---------------------------------------------------------------------------
+# Routes — admin
+# ---------------------------------------------------------------------------
+@app.route("/api/admin/users", methods=["GET","OPTIONS"])
+def admin_list_users():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    _, err = _require_admin(request)
+    if err: return err
+    idx = cache_get("auth:users:index") or "[]"
+    try: emails = json.loads(idx)
+    except Exception: emails = []
+    users = []
+    for email in emails:
+        raw = cache_get(_user_key(email))
+        if raw:
+            try:
+                u = json.loads(raw)
+                users.append({"email": u["email"], "name": u.get("name",""),
+                              "status": u.get("status"), "created_at": u.get("created_at")})
+            except Exception:
+                pass
+    return _cors(jsonify({"users": users}))
+
+
+@app.route("/api/admin/approve", methods=["POST","OPTIONS"])
+def admin_approve():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    _, err = _require_admin(request)
+    if err: return err
+    email = (request.get_json(force=True) or {}).get("email", "").lower().strip()
+    uk    = _user_key(email)
+    raw   = cache_get(uk)
+    if not raw: return _cors(jsonify({"error": "user not found"})), 404
+    try:
+        u = json.loads(raw)
+        u["status"] = "approved"
+        cache_set(uk, json.dumps(u), ttl_seconds=None)
+        return _cors(jsonify({"status": "approved"}))
+    except Exception:
+        return _cors(jsonify({"error": "failed"})), 500
+
+
+@app.route("/api/admin/reject", methods=["POST","OPTIONS"])
+def admin_reject():
+    if request.method == "OPTIONS": return _cors(jsonify({}))
+    _, err = _require_admin(request)
+    if err: return err
+    email = (request.get_json(force=True) or {}).get("email", "").lower().strip()
+    uk    = _user_key(email)
+    raw   = cache_get(uk)
+    if not raw: return _cors(jsonify({"error": "user not found"})), 404
+    try:
+        u = json.loads(raw)
+        u["status"] = "rejected"
+        cache_set(uk, json.dumps(u), ttl_seconds=None)
+        return _cors(jsonify({"status": "rejected"}))
+    except Exception:
+        return _cors(jsonify({"error": "failed"})), 500
+
+
+# ---------------------------------------------------------------------------
+# Routes — forecast (auth-gated)
 # ---------------------------------------------------------------------------
 @app.route("/api/forecast", methods=["GET","OPTIONS"])
 def get_spots():
@@ -503,6 +713,8 @@ def get_spots():
 
 @app.route("/api/forecast", methods=["POST"])
 def get_forecast():
+    _, err = _require_auth(request)
+    if err: return err
     try:
         body        = request.get_json(force=True) or {}
         spots_in    = body.get("spots", [])

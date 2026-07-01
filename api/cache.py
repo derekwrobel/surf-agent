@@ -39,11 +39,14 @@ def cache_get(key):
     return None
 
 def cache_set(key, value, ttl_seconds=7200):
-    """Store value with TTL. Returns True on success."""
-    # Upstash REST: SET key value EX ttl
+    """Store value with TTL. Pass ttl_seconds=None for no expiry. Returns True on success."""
     encoded_key = urllib.parse.quote(key, safe='')
     encoded_val = urllib.parse.quote(value, safe='')
-    res = _request(f"/set/{encoded_key}/{encoded_val}/ex/{ttl_seconds}")
+    if ttl_seconds:
+        path = f"/set/{encoded_key}/{encoded_val}/ex/{ttl_seconds}"
+    else:
+        path = f"/set/{encoded_key}/{encoded_val}"
+    res = _request(path)
     return res and res.get("result") == "OK"
 
 def cache_available():
