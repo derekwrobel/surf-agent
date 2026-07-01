@@ -56,15 +56,15 @@
   .error{color:#dc2626;font-size:13px;margin-top:12px;padding:12px;background:#fef2f2;border-radius:10px;}
   @media(prefers-color-scheme:dark){.error{background:#2a1010;color:#f87171;}}
   .empty-state{text-align:center;padding:24px 16px;color:var(--text-tertiary);font-size:13px;}
-  .spot-card{padding:14px 0;border-bottom:0.5px solid var(--border);}
+  .spot-card{padding:10px 0;border-bottom:0.5px solid var(--border);}
   .spot-card:last-child{border-bottom:none;padding-bottom:0;}
   .spot-card:first-child{padding-top:0;}
-  .spot-header{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;}
+  .spot-header{display:flex;align-items:baseline;gap:6px;margin-bottom:1px;}
   .rank-num{font-size:13px;font-weight:700;color:var(--text-tertiary);min-width:18px;}
-  .spot-name{font-size:16px;font-weight:700;color:var(--text);}
-  .spot-stars{font-size:14px;margin-bottom:4px;}
-  .spot-conditions{font-size:13px;color:var(--text-secondary);margin-bottom:6px;line-height:1.5;}
-  .spot-detail{font-size:14px;line-height:1.7;color:var(--text);}
+  .spot-name{font-size:15px;font-weight:700;color:var(--text);}
+  .spot-stars{font-size:13px;margin-bottom:2px;}
+  .spot-conditions{font-size:13px;color:var(--text-secondary);margin-bottom:3px;line-height:1.4;}
+  .spot-detail{font-size:13px;line-height:1.6;color:var(--text);}
 </style>
 </head>
 <body>
@@ -678,7 +678,11 @@ function renderStars(line) {
 function formatResult(text) {
   const cards = text.split(/\n\n---\n\n/).map(c => c.trim()).filter(Boolean);
   if (cards.length > 1) {
-    cards.sort((a, b) => parseStarRating(a.split('\n')[0]) < parseStarRating(b.split('\n')[0]) ? 1 : -1);
+    cards.sort((a, b) => {
+      const titleA = a.split('\n').find(l => /\*\*.*?\*\*/.test(l)) || '';
+      const titleB = b.split('\n').find(l => /\*\*.*?\*\*/.test(l)) || '';
+      return parseStarRating(titleB) - parseStarRating(titleA);
+    });
   }
   return cards.map((card, i) => {
     // Strip markdown headings and blank lines, normalize
@@ -710,9 +714,16 @@ function formatResult(text) {
     const detail = detailLines.join(' ').trim();
 
     const rankNum = cards.length > 1 ? `<span class="rank-num">${i + 1}.</span>` : '';
+
+    // Fallback: if we couldn't parse a name, render raw card text
+    if (!spotName) {
+      const raw = card.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      return `<div class="spot-card"><div class="spot-header">${rankNum}</div><div class="spot-detail">${raw}</div></div>`;
+    }
+
     return `<div class="spot-card">
       <div class="spot-header">${rankNum}<span class="spot-name">${spotName}</span></div>
-      <div class="spot-stars">${renderStars(starsStr)}</div>
+      ${starsStr ? `<div class="spot-stars">${renderStars(starsStr)}</div>` : ''}
       ${conditions ? `<div class="spot-conditions">${conditions}</div>` : ''}
       ${detail ? `<div class="spot-detail">${detail}</div>` : ''}
     </div>`;
