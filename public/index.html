@@ -56,10 +56,15 @@
   .error{color:#dc2626;font-size:13px;margin-top:12px;padding:12px;background:#fef2f2;border-radius:10px;}
   @media(prefers-color-scheme:dark){.error{background:#2a1010;color:#f87171;}}
   .empty-state{text-align:center;padding:24px 16px;color:var(--text-tertiary);font-size:13px;}
-  .spot-card{padding:12px 0;border-bottom:0.5px solid var(--border);display:flex;gap:10px;}
+  .spot-card{padding:14px 0;border-bottom:0.5px solid var(--border);}
   .spot-card:last-child{border-bottom:none;padding-bottom:0;}
   .spot-card:first-child{padding-top:0;}
-  .rank-num{font-size:15px;font-weight:700;color:var(--text-tertiary);min-width:18px;padding-top:1px;}
+  .spot-header{display:flex;align-items:baseline;gap:8px;margin-bottom:2px;}
+  .rank-num{font-size:13px;font-weight:700;color:var(--text-tertiary);min-width:18px;}
+  .spot-name{font-size:16px;font-weight:700;color:var(--text);}
+  .spot-stars{font-size:14px;margin-bottom:4px;}
+  .spot-conditions{font-size:13px;color:var(--text-secondary);margin-bottom:6px;line-height:1.5;}
+  .spot-detail{font-size:14px;line-height:1.7;color:var(--text);}
 </style>
 </head>
 <body>
@@ -659,27 +664,44 @@ function setLoading(loading, statusText) {
   }
 }
 
-function parseStars(card) {
-  const m = card.match(/(\d+(?:\.\d+)?)\s*$/m) || card.match(/[\d.]+/);
-  // look for a decimal rating like 4.5 or 3.0 on the first line
-  const firstLine = card.split('\n')[0];
-  const rating = firstLine.match(/(\d+(?:\.\d+)?)\s*$/);
-  return rating ? parseFloat(rating[1]) : 0;
+function parseStarRating(line) {
+  const m = line.match(/(\d+(?:\.\d+)?)\s*$/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+function renderStars(line) {
+  return line
+    .replace(/★/g, '<span class="stars">★</span>')
+    .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
 }
 
 function formatResult(text) {
-  // Split cards, sort best-to-worst, rejoin
-  const cards = text.split(/\n\n---\n\n/);
+  const cards = text.split(/\n\n---\n\n/).map(c => c.trim()).filter(Boolean);
   if (cards.length > 1) {
-    cards.sort((a, b) => parseStars(b) - parseStars(a));
+    cards.sort((a, b) => parseStarRating(a.split('\n')[0]) < parseStarRating(b.split('\n')[0]) ? 1 : -1);
   }
   return cards.map((card, i) => {
-    const ranked = cards.length > 1 ? `<div class="rank-num">${i + 1}.</div>` : '';
-    const html = card
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/★/g, '<span class="stars">★</span>')
-      .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
-    return `<div class="spot-card">${ranked}${html}</div>`;
+    const lines = card.split('\n').map(l => l.trim()).filter(Boolean);
+    // Line 0: **Spot Name** ★★★☆☆ 3.0
+    const firstLine = lines[0] || '';
+    const nameMatch = firstLine.match(/^\*\*(.*?)\*\*/);
+    const spotName  = nameMatch ? nameMatch[1] : firstLine.replace(/★|☆|\d+\.\d+/g, '').trim();
+    const starsStr  = firstLine.replace(/\*\*.*?\*\*/, '').trim();
+    // Line 1: conditions (height | period | swell | wind | tide)
+    const condLine  = lines[1] || '';
+    const isConditions = condLine.includes('|') || condLine.includes('ft') || condLine.includes('mph');
+    const conditions = isConditions ? condLine : '';
+    // Remaining: detail paragraphs
+    const detailLines = isConditions ? lines.slice(2) : lines.slice(1);
+    const detail = detailLines.join(' ').trim();
+
+    const rankNum = cards.length > 1 ? `<span class="rank-num">${i + 1}.</span>` : '';
+    return `<div class="spot-card">
+      <div class="spot-header">${rankNum}<span class="spot-name">${spotName}</span></div>
+      <div class="spot-stars">${renderStars(starsStr)}</div>
+      ${conditions ? `<div class="spot-conditions">${conditions}</div>` : ''}
+      ${detail ? `<div class="spot-detail">${detail}</div>` : ''}
+    </div>`;
   }).join('');
 }
 
