@@ -272,39 +272,27 @@ def fetch_url(url, timeout=10):
         return r.read().decode("utf-8")
 
 
-def fetch_openmeteo(spot, target_date, now=False):
+def fetch_openmeteo(spot, target_date, target_hour):
+    """Fetch Open-Meteo for a spot, returning data for target_hour and the 3 hours after."""
     params = urllib.parse.urlencode({
         "latitude": spot["lat"], "longitude": spot["lng"],
         "hourly": "wave_height,wave_period,wave_direction,swell_wave_height,swell_wave_period,swell_wave_direction,wind_speed_10m,wind_direction_10m",
-        "wind_speed_unit": "mph", "timezone": "America/Los_Angeles", "forecast_days": 2,
+        "wind_speed_unit": "mph", "timezone": "America/Los_Angeles", "forecast_days": 3,
     })
     data = json.loads(fetch_url(f"https://marine-api.open-meteo.com/v1/marine?{params}"))
     hourly = data["hourly"]
 
-    if now:
-        now_pt = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
-        current_hour = now_pt.strftime("%Y-%m-%dT%H:00")
-        lines = []; count = 0; collecting = False
-        for i, t in enumerate(hourly["time"]):
-            if t == current_hour: collecting = True
-            if collecting and count < 4:
-                wh=hourly["wave_height"][i] or 0; wp=hourly["wave_period"][i] or 0
-                wd=hourly["wave_direction"][i] or 0; swh=hourly["swell_wave_height"][i] or 0
-                swp=hourly["swell_wave_period"][i] or 0; swd=hourly["swell_wave_direction"][i] or 0
-                ws=hourly["wind_speed_10m"][i] or 0; wdr=hourly["wind_direction_10m"][i] or 0
-                lines.append(f"  {t[11:16]}: wave {wh:.1f}m/{wp:.0f}s/{wd:.0f}deg | swell {swh:.1f}m {swp:.0f}s from {swd:.0f}deg | wind {ws:.0f}mph from {wdr:.0f}deg")
-                count += 1
-    else:
-        date_str = target_date.strftime("%Y-%m-%d"); lines = []
-        for i, t in enumerate(hourly["time"]):
-            if not t.startswith(date_str): continue
-            hour = int(t[11:13])
-            if 5 <= hour <= 8:
-                wh=hourly["wave_height"][i] or 0; wp=hourly["wave_period"][i] or 0
-                wd=hourly["wave_direction"][i] or 0; swh=hourly["swell_wave_height"][i] or 0
-                swp=hourly["swell_wave_period"][i] or 0; swd=hourly["swell_wave_direction"][i] or 0
-                ws=hourly["wind_speed_10m"][i] or 0; wdr=hourly["wind_direction_10m"][i] or 0
-                lines.append(f"  {t[11:16]}: wave {wh:.1f}m/{wp:.0f}s/{wd:.0f}deg | swell {swh:.1f}m {swp:.0f}s from {swd:.0f}deg | wind {ws:.0f}mph from {wdr:.0f}deg")
+    date_str = target_date.strftime("%Y-%m-%d")
+    lines = []
+    for i, t in enumerate(hourly["time"]):
+        if not t.startswith(date_str): continue
+        hour = int(t[11:13])
+        if target_hour <= hour <= target_hour + 3:
+            wh=hourly["wave_height"][i] or 0; wp=hourly["wave_period"][i] or 0
+            wd=hourly["wave_direction"][i] or 0; swh=hourly["swell_wave_height"][i] or 0
+            swp=hourly["swell_wave_period"][i] or 0; swd=hourly["swell_wave_direction"][i] or 0
+            ws=hourly["wind_speed_10m"][i] or 0; wdr=hourly["wind_direction_10m"][i] or 0
+            lines.append(f"  {t[11:16]}: wave {wh:.1f}m/{wp:.0f}s/{wd:.0f}deg | swell {swh:.1f}m {swp:.0f}s from {swd:.0f}deg | wind {ws:.0f}mph from {wdr:.0f}deg")
 
     name = spot.get("name") or spot.get("key", "Unknown")
     if not lines: return f"{name}: no data"
@@ -410,9 +398,9 @@ def _format_spot_knowledge(spot_keys):
     return "\n".join(lines)
 
 
-def _spot_cache_key(spot_key, date_str, window):
+def _spot_cache_key(spot_key, date_str, hour):
     h = hashlib.md5(spot_key.encode()).hexdigest()[:8]
-    return f"swell:spot:{h}:{date_str}:{window}"
+    return f"swell:spot:{h}:{date_str}:{hour:02d}"
 
 
 def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_name, spot_key, now_mode=False):
@@ -440,13 +428,14 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_name,
         return json.loads(r.read())["content"][0]["text"]
 
 
-def _forecast_one_spot(spot, target, now_mode, buoy_block, tide_block):
+def _forecast_one_spot(spot, target_date, target_hour, buoy_block, tide_block):
     """Fetch Open-Meteo and call Claude for a single spot. Returns (key, result)."""
     key = spot.get("key", "")
     name = spot.get("name") or key
     try:
-        om_block = fetch_openmeteo(spot, target, now=now_mode)
-        result = call_claude(om_block, buoy_block, tide_block, target, name, key, now_mode)
+        om_block = fetch_openmeteo(spot, target_date, target_hour)
+        now_mode = False  # hour-based forecasts are always time-specific, not live
+        result = call_claude(om_block, buoy_block, tide_block, target_date, name, key, now_mode)
         return key, result
     except Exception as e:
         return key, f"**{name}** — error: {e}"
@@ -464,25 +453,28 @@ def get_spots():
 @app.route("/api/forecast", methods=["POST"])
 def get_forecast():
     try:
-        body       = request.get_json(force=True) or {}
-        spots_in   = body.get("spots", [])
-        now_mode   = body.get("now", False)
-        days_ahead = int(body.get("days_ahead", 1))
-        target     = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles")) + timedelta(days=days_ahead)
+        body        = request.get_json(force=True) or {}
+        spots_in    = body.get("spots", [])
+        target_date = body.get("target_date")  # "YYYY-MM-DD"
+        target_hour = int(body.get("target_hour", 6))  # rounded-up hour (0-23)
+
+        if not target_date:
+            # fallback: tomorrow at 6am
+            tz = zoneinfo.ZoneInfo("America/Los_Angeles")
+            target_date = (datetime.now(tz) + timedelta(days=1)).strftime("%Y-%m-%d")
+            target_hour = 6
+
+        target_dt = datetime.strptime(target_date, "%Y-%m-%d")
 
         spots = [s for s in spots_in if "lat" in s and "lng" in s]
         if not spots: return _cors(jsonify({"error":"No valid spots with coordinates"})), 400
 
-        window   = "now" if now_mode else "dawn"
-        date_str = target.strftime("%Y-%m-%d")
-        ttl      = 3600 if now_mode else 86400
-
-        # Per-spot cache check
-        spot_results  = {}
+        # Per-spot cache check (keyed by exact date + hour)
+        spot_results   = {}
         spots_to_fetch = []
         for spot in spots:
-            key = spot.get("key", "")
-            ck  = _spot_cache_key(key, date_str, window)
+            key    = spot.get("key", "")
+            ck     = _spot_cache_key(key, target_date, target_hour)
             cached = cache_get(ck) if cache_available() else None
             if cached:
                 spot_results[key] = cached
@@ -493,26 +485,25 @@ def get_forecast():
             try: buoy_block = fetch_buoys(spots_to_fetch)
             except Exception as e: buoy_block = f"Buoy data unavailable: {e}"
             tide_station = pick_tide_station(spots_to_fetch)
-            try: tide_block = fetch_tides(target, tide_station)
+            try: tide_block = fetch_tides(target_dt, tide_station)
             except Exception as e: tide_block = f"Tide data unavailable: {e}"
 
             # Parallel Claude calls for uncached spots
             with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
                 futs = {
-                    ex.submit(_forecast_one_spot, spot, target, now_mode, buoy_block, tide_block): spot
+                    ex.submit(_forecast_one_spot, spot, target_dt, target_hour, buoy_block, tide_block): spot
                     for spot in spots_to_fetch
                 }
                 for fut in concurrent.futures.as_completed(futs):
                     key, result = fut.result()
                     spot_results[key] = result
                     if cache_available():
-                        cache_set(_spot_cache_key(key, date_str, window), result, ttl_seconds=ttl)
+                        cache_set(_spot_cache_key(key, target_date, target_hour), result, ttl_seconds=86400)
 
         # Return in original request order
-        ordered = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
+        ordered  = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
         combined = "\n\n---\n\n".join(ordered)
-        all_cached = len(spots_to_fetch) == 0
-        return _cors(jsonify({"result": combined, "cached": all_cached}))
+        return _cors(jsonify({"result": combined, "cached": len(spots_to_fetch) == 0}))
     except Exception as e:
         return _cors(jsonify({"error": str(e)})), 500
 
@@ -529,11 +520,13 @@ def run_cron():
     if not cache_available():
         return _cors(jsonify({"error": "Redis not configured"})), 500
 
-    now_pt = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
-    # Only pre-cache dawn patrol (tomorrow); "now" changes every hour so not worth pre-caching
-    target_date = now_pt + timedelta(days=1)
-    window      = "dawn"
-    date_str    = target_date.strftime("%Y-%m-%d")
+    now_pt     = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
+    # Pre-cache next 3 days × dawn hours per spot
+    CRON_TARGETS = [
+        (now_pt + timedelta(days=d), hour)
+        for d in range(1, 4)
+        for hour in [5, 6, 7, 8]
+    ]
 
     # Pre-fetch buoy data once per coast
     west_spot = [{"lat": 32.7528, "lng": -117.2553}]
@@ -543,14 +536,15 @@ def run_cron():
     try: east_buoys = fetch_buoys(east_spot)
     except Exception as e: east_buoys = f"Buoys unavailable: {e}"
 
-    # Pre-fetch tide data per station (cached locally in dict to avoid repeat calls)
+    # Pre-fetch tide data per station+date (cached locally to avoid repeat calls)
     tide_cache_local = {}
-    def get_tide(spot_list):
+    def get_tide(spot_list, tgt_date):
         sid = pick_tide_station(spot_list)
-        if sid not in tide_cache_local:
-            try: tide_cache_local[sid] = fetch_tides(target_date, sid)
-            except Exception as e: tide_cache_local[sid] = f"Tides unavailable: {e}"
-        return tide_cache_local[sid]
+        cache_key_t = f"{sid}:{tgt_date.strftime('%Y-%m-%d')}"
+        if cache_key_t not in tide_cache_local:
+            try: tide_cache_local[cache_key_t] = fetch_tides(tgt_date, sid)
+            except Exception as e: tide_cache_local[cache_key_t] = f"Tides unavailable: {e}"
+        return tide_cache_local[cache_key_t]
 
     # Build full spot list from knowledge base (has lat/lng for every spot)
     all_spots = [
@@ -559,7 +553,7 @@ def run_cron():
         if "lat" in v and "lng" in v
     ]
 
-    # Process up to 25 uncached spots per cron invocation to stay within timeout
+    # Process up to 25 uncached spot+hour combos per cron invocation to stay within timeout
     MAX_PER_RUN = 25
     results = {"cached": [], "skipped": [], "failed": []}
 
@@ -567,30 +561,30 @@ def run_cron():
         if len(results["cached"]) >= MAX_PER_RUN:
             break
 
-        ck = _spot_cache_key(spot["key"], date_str, window)
-
-        # Skip if already cached
-        if cache_get(ck):
-            results["skipped"].append(spot["key"])
-            continue
-
-        is_east = spot["lng"] > -81
-        tz_name = "America/New_York" if is_east else "America/Los_Angeles"
-        if not _is_daylight(spot["lat"], spot["lng"], tz_name):
-            results["skipped"].append(f"{spot['key']}:nighttime")
-            continue
-
+        is_east    = spot["lng"] > -81
+        tz_name    = "America/New_York" if is_east else "America/Los_Angeles"
         buoy_block = east_buoys if is_east else west_buoys
-        tide_block = get_tide([spot])
 
-        try:
-            om_block = fetch_openmeteo(spot, target_date, now=False)
-            result   = call_claude(om_block, buoy_block, tide_block,
-                                   target_date, spot["name"], spot["key"], now_mode=False)
-            cache_set(ck, result, ttl_seconds=86400)
-            results["cached"].append(spot["key"])
-        except Exception as e:
-            results["failed"].append({"key": spot["key"], "error": str(e)})
+        for target_date, hour in CRON_TARGETS:
+            if len(results["cached"]) >= MAX_PER_RUN:
+                break
+
+            date_str = target_date.strftime("%Y-%m-%d")
+            ck = _spot_cache_key(spot["key"], date_str, hour)
+
+            if cache_get(ck):
+                results["skipped"].append(f"{spot['key']}:{date_str}:{hour:02d}")
+                continue
+
+            try:
+                tide_block = get_tide([spot], target_date)
+                om_block   = fetch_openmeteo(spot, target_date, hour)
+                result     = call_claude(om_block, buoy_block, tide_block,
+                                       target_date, spot["name"], spot["key"], now_mode=False)
+                cache_set(ck, result, ttl_seconds=345600)
+                results["cached"].append(f"{spot['key']}:{date_str}:{hour:02d}")
+            except Exception as e:
+                results["failed"].append({"key": f"{spot['key']}:{date_str}:{hour:02d}", "error": str(e)})
 
     return _cors(jsonify({
         "status": "ok",
