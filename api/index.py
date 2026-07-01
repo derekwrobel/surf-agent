@@ -367,7 +367,7 @@ def _get_buoy(buoy):
 
 def fetch_buoys_for_spot(spot):
     """Return cached buoy data for the 2 nearest buoys to this spot."""
-    buoys = pick_nearest_buoys_for_spot(spot, n=2)
+    buoys = pick_nearest_buoys_for_spot(spot)
     return "\n\n".join(_get_buoy(b) for b in buoys)
 
 
