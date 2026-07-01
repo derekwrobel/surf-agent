@@ -441,28 +441,6 @@ def _forecast_one_spot(spot, target_date, target_hour, buoy_block, tide_block):
         return key, f"**{name}** — error: {e}"
 
 
-def rank_spots(spot_cards, target_date, target_hour):
-    """Given a list of per-spot forecast cards, ask Claude to rank them best-to-worst."""
-    if len(spot_cards) <= 1:
-        return spot_cards[0] if spot_cards else ""
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    cards_text = "\n\n---\n\n".join(spot_cards)
-    hour_label = f"{target_hour:02d}:00"
-    payload = json.dumps({
-        "model": "claude-sonnet-4-6", "max_tokens": 1200,
-        "messages": [{"role": "user", "content": (
-            f"The following are surf forecasts for {target_date} at {hour_label}. "
-            f"Re-output them ranked best to worst by star rating (highest first). "
-            f"Add '1.' '2.' etc. before each spot name. Do not change any other content.\n\n"
-            f"{cards_text}"
-        )}]
-    }).encode()
-    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload, headers={
-        "Content-Type": "application/json", "x-api-key": api_key, "anthropic-version": "2023-06-01",
-    })
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read())["content"][0]["text"]
-
 
 # ---------------------------------------------------------------------------
 # Routes
@@ -492,7 +470,16 @@ def get_forecast():
         spots = [s for s in spots_in if "lat" in s and "lng" in s]
         if not spots: return _cors(jsonify({"error":"No valid spots with coordinates"})), 400
 
-        # Per-spot cache check (keyed by exact date + hour)
+        # Check ranked combination cache first — true instant return
+        spot_keys_sorted = sorted(s.get("key", "") for s in spots)
+        combo_hash = hashlib.md5(",".join(spot_keys_sorted).encode()).hexdigest()[:8]
+        combo_ck   = f"swell:ranked:{combo_hash}:{target_date}:{target_hour:02d}"
+        if cache_available():
+            cached_ranked = cache_get(combo_ck)
+            if cached_ranked:
+                return _cors(jsonify({"result": cached_ranked, "cached": True}))
+
+        # Per-spot cache check
         spot_results   = {}
         spots_to_fetch = []
         for spot in spots:
@@ -511,7 +498,6 @@ def get_forecast():
             try: tide_block = fetch_tides(target_dt, tide_station)
             except Exception as e: tide_block = f"Tide data unavailable: {e}"
 
-            # Parallel Claude calls for uncached spots
             with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
                 futs = {
                     ex.submit(_forecast_one_spot, spot, target_dt, target_hour, buoy_block, tide_block): spot
@@ -521,15 +507,14 @@ def get_forecast():
                     key, result = fut.result()
                     spot_results[key] = result
                     if cache_available():
-                        cache_set(_spot_cache_key(key, target_date, target_hour), result, ttl_seconds=86400)
+                        cache_set(_spot_cache_key(key, target_date, target_hour), result, ttl_seconds=345600)
 
-        # Rank all spots best-to-worst (single cheap Claude call to sort the cards)
-        ordered = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
-        try:
-            combined = rank_spots(ordered, target_date, target_hour)
-        except Exception:
-            combined = "\n\n---\n\n".join(ordered)  # fallback: unranked
-        return _cors(jsonify({"result": combined, "cached": len(spots_to_fetch) == 0}))
+        # Combine spot cards (frontend will sort by star rating)
+        ordered  = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
+        combined = "\n\n---\n\n".join(ordered)
+        if cache_available():
+            cache_set(combo_ck, combined, ttl_seconds=345600)
+        return _cors(jsonify({"result": combined, "cached": False}))
     except Exception as e:
         return _cors(jsonify({"error": str(e)})), 500
 

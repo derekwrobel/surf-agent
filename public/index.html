@@ -56,6 +56,10 @@
   .error{color:#dc2626;font-size:13px;margin-top:12px;padding:12px;background:#fef2f2;border-radius:10px;}
   @media(prefers-color-scheme:dark){.error{background:#2a1010;color:#f87171;}}
   .empty-state{text-align:center;padding:24px 16px;color:var(--text-tertiary);font-size:13px;}
+  .spot-card{padding:12px 0;border-bottom:0.5px solid var(--border);display:flex;gap:10px;}
+  .spot-card:last-child{border-bottom:none;padding-bottom:0;}
+  .spot-card:first-child{padding-top:0;}
+  .rank-num{font-size:15px;font-weight:700;color:var(--text-tertiary);min-width:18px;padding-top:1px;}
 </style>
 </head>
 <body>
@@ -655,11 +659,28 @@ function setLoading(loading, statusText) {
   }
 }
 
+function parseStars(card) {
+  const m = card.match(/(\d+(?:\.\d+)?)\s*$/m) || card.match(/[\d.]+/);
+  // look for a decimal rating like 4.5 or 3.0 on the first line
+  const firstLine = card.split('\n')[0];
+  const rating = firstLine.match(/(\d+(?:\.\d+)?)\s*$/);
+  return rating ? parseFloat(rating[1]) : 0;
+}
+
 function formatResult(text) {
-  return text
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/★/g, '<span class="stars">★</span>')
-    .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
+  // Split cards, sort best-to-worst, rejoin
+  const cards = text.split(/\n\n---\n\n/);
+  if (cards.length > 1) {
+    cards.sort((a, b) => parseStars(b) - parseStars(a));
+  }
+  return cards.map((card, i) => {
+    const ranked = cards.length > 1 ? `<div class="rank-num">${i + 1}.</div>` : '';
+    const html = card
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/★/g, '<span class="stars">★</span>')
+      .replace(/☆/g, '<span style="color:var(--text-secondary)">☆</span>');
+    return `<div class="spot-card">${ranked}${html}</div>`;
+  }).join('');
 }
 
 async function getForecast() {
@@ -676,13 +697,16 @@ async function getForecast() {
     return;
   }
 
+  // Round up to the nearest hour
   const chosenDate = new Date(dtVal);
-  const now = new Date();
-  const nowMode = chosenDate <= now; // treat as "right now" if in the past or current hour
+  if (chosenDate.getMinutes() > 0 || chosenDate.getSeconds() > 0) {
+    chosenDate.setMinutes(0, 0, 0);
+    chosenDate.setHours(chosenDate.getHours() + 1);
+  }
 
-  // Compute days_ahead as a float for the backend (it only uses integer days for Open-Meteo)
-  const msPerDay = 86400000;
-  const daysAhead = Math.max(0, Math.round((chosenDate - now) / msPerDay));
+  // target_date in local (PT) format and target_hour
+  const targetDate = chosenDate.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // "YYYY-MM-DD"
+  const targetHour = parseInt(chosenDate.toLocaleString("en-US", { timeZone: "America/Los_Angeles", hour: "numeric", hour12: false }), 10);
 
   const spotsPayload = [...selected].map(key => {
     const c = COORDS[key];
@@ -695,13 +719,11 @@ async function getForecast() {
     return;
   }
 
-  const timeLabel = nowMode ? "right now" : chosenDate.toLocaleString("en-US", {weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit"});
+  const timeLabel = chosenDate.toLocaleString("en-US", {weekday:"short", month:"short", day:"numeric", hour:"numeric", timeZone:"America/Los_Angeles"});
   setLoading(true, `Fetching forecast for ${timeLabel}…`);
 
   try {
-    const body = nowMode
-      ? { spots: spotsPayload, now: true }
-      : { spots: spotsPayload, days_ahead: daysAhead };
+    const body = { spots: spotsPayload, target_date: targetDate, target_hour: targetHour };
 
     const res = await fetch("/api/forecast", {
       method: "POST",
