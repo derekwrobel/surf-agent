@@ -288,7 +288,7 @@ async function loadAdminUsers() {
   if (!pw) { _setAuthMsg("admin-msg", "Enter admin password", "error"); return; }
   const creds = btoa("admin:" + pw);
   try {
-    const res  = await fetch("/api/admin/users", {headers:{Authorization:"Basic "+creds}});
+    const res  = await fetch("/api/admin/users", {headers:{Authorization:"Basic "+creds}, cache:"no-store"});
     const data = await res.json();
     if (!res.ok) { _setAuthMsg("admin-msg", "Wrong password", "error"); return; }
     _setAuthMsg("admin-msg", "", "");

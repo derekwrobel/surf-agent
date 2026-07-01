@@ -663,7 +663,9 @@ def admin_list_users():
                               "status": u.get("status"), "created_at": u.get("created_at")})
             except Exception:
                 pass
-    return _cors(jsonify({"users": users}))
+    resp = _cors(jsonify({"users": users}))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.route("/api/admin/approve", methods=["POST","OPTIONS"])
