@@ -687,8 +687,11 @@ function formatResult(text) {
   return cards.map((card, i) => {
     const allLines = card.split('\n').map(l => l.trim()).filter(Boolean);
 
-    // Find the structured title line: **Name** ★ X.X
-    let titleIdx = allLines.findIndex(l => /\*\*.*?\*\*/.test(l) && /[\d.]+/.test(l));
+    // Find the structured title line: **Name** ★★★☆☆ X.X
+    // Must have bold text AND star chars AND end with a decimal rating like 3.0 or 4.5
+    let titleIdx = allLines.findIndex(l =>
+      /\*\*.*?\*\*/.test(l) && /[★☆]/.test(l) && /\d+\.\d+\s*$/.test(l)
+    );
     let spotName = '', starsStr = '';
 
     if (titleIdx !== -1) {
