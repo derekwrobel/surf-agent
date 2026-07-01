@@ -9,6 +9,16 @@ from cache import cache_get, cache_set, cache_available
 app = Flask(__name__)
 
 # ---------------------------------------------------------------------------
+# Spot knowledge base
+# ---------------------------------------------------------------------------
+_knowledge_path = os.path.join(os.path.dirname(__file__), "spot_knowledge.json")
+try:
+    with open(_knowledge_path) as _f:
+        SPOT_KNOWLEDGE = json.load(_f)
+except Exception:
+    SPOT_KNOWLEDGE = {}
+
+# ---------------------------------------------------------------------------
 # NOAA buoy database — nearest 2 selected dynamically per request
 # ---------------------------------------------------------------------------
 ALL_BUOYS = [
@@ -253,7 +263,13 @@ SKIP (flat/blown out):
 
 Notes: [tide warnings, crowd notes, buoy vs model gaps. 2-3 sentences]
 
-Stars: 5=pumping 4=good 3=decent 2=marginal 1=barely surfable. Convert m to ft (x3.28)."""
+Star ratings are ABSOLUTE, not relative to the other checked spots. Half-point increments allowed (e.g. 3.5, 4.5):
+- 5: Pumping — 4ft+ with 12s+ groundswell, offshore winds, good tide.
+- 4-4.5: Good — 3-4ft, 10s+ period, light wind, tide working.
+- 3-3.5: Decent — 2-3ft, 8-10s, manageable conditions.
+- 2-2.5: Marginal — under 2ft, short period, or onshore wind.
+- 1-1.5: Poor — flat, blown out, or wrong swell direction.
+If all spots are bad, give them all low scores. Do NOT give 5 stars just because it's the best of a bad bunch. Convert m to ft (x3.28)."""
 
 
 # ---------------------------------------------------------------------------
@@ -384,15 +400,41 @@ def fetch_tides(target_date, station):
     return "\n".join(out)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names, now_mode=False):
+def _format_spot_knowledge(spot_keys):
+    lines = []
+    for key in spot_keys:
+        k = SPOT_KNOWLEDGE.get(key)
+        if not k:
+            continue
+        lines.append(
+            f"- {k.get('name', key)}: {k.get('break_type','?')} on {k.get('bottom','?')}. "
+            f"Optimal swell {k.get('optimal_swell_dir','?')}deg, {k.get('optimal_swell_size_ft','?')}ft, "
+            f"{k.get('min_period_s','?')}s+ period. "
+            f"Tide: {k.get('tide','')} "
+            f"Wind: {k.get('wind','')} "
+            f"Season: {k.get('primary_swell_season','')}. "
+            f"Crowd: {k.get('crowd','?')}, skill: {k.get('skill_level','?')}. "
+            f"{k.get('notes','')}"
+        )
+    return "\n".join(lines)
+
+
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names, now_mode=False, spot_keys=None):
     api_key = os.environ.get("ANTHROPIC_API_KEY","")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
     mode_str = "RIGHT NOW (next 3 hours)" if now_mode else f"dawn patrol on {date_label}"
+    extra_blocks = ""
+    if spot_keys:
+        knowledge = _format_spot_knowledge(spot_keys)
+        if knowledge:
+            extra_blocks += f"\n\nSPOT LOCAL KNOWLEDGE:\n{knowledge}"
+
     payload = json.dumps({
         "model":"claude-sonnet-4-6","max_tokens":1500,
         "system":SYSTEM_PROMPT,
         "messages":[{"role":"user","content":(
-            f"Rank ONLY these spots for {mode_str}: {spot_names}. Do not include any other spots.\n\n"
+            f"Rank ONLY these spots for {mode_str}: {spot_names}. Do not include any other spots."
+            f"{extra_blocks}\n\n"
             f"SOURCE 1 - Open-Meteo forecast:\n{openmeteo_block}\n\n"
             f"SOURCE 2 - NOAA Buoy readings:\n{buoy_block}\n\n"
             f"SOURCE 3 - NOAA Tides:\n{tide_block}"
@@ -452,7 +494,11 @@ def get_forecast():
         except Exception as e: tide_block = f"Tide data unavailable: {e}"
 
         spot_names = ", ".join(s.get("key","?") for s in spots)
-        result = call_claude("\n\n".join(openmeteo_parts), buoy_block, tide_block, target, spot_names, now_mode)
+        result = call_claude(
+            "\n\n".join(openmeteo_parts), buoy_block, tide_block,
+            target, spot_names, now_mode,
+            spot_keys=spot_keys_sorted,
+        )
 
         if cache_available():
             cache_set(cache_key, result, ttl_seconds=5400)
@@ -524,6 +570,7 @@ def run_cron():
         "failed": len(results["failed"]),
         "details": results
     }))
+
 
 
 def _cors(response):
