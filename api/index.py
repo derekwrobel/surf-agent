@@ -441,6 +441,29 @@ def _forecast_one_spot(spot, target_date, target_hour, buoy_block, tide_block):
         return key, f"**{name}** — error: {e}"
 
 
+def rank_spots(spot_cards, target_date, target_hour):
+    """Given a list of per-spot forecast cards, ask Claude to rank them best-to-worst."""
+    if len(spot_cards) <= 1:
+        return spot_cards[0] if spot_cards else ""
+    api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    cards_text = "\n\n---\n\n".join(spot_cards)
+    hour_label = f"{target_hour:02d}:00"
+    payload = json.dumps({
+        "model": "claude-sonnet-4-6", "max_tokens": 1200,
+        "messages": [{"role": "user", "content": (
+            f"The following are surf forecasts for {target_date} at {hour_label}. "
+            f"Re-output them ranked best to worst by star rating (highest first). "
+            f"Add '1.' '2.' etc. before each spot name. Do not change any other content.\n\n"
+            f"{cards_text}"
+        )}]
+    }).encode()
+    req = urllib.request.Request("https://api.anthropic.com/v1/messages", data=payload, headers={
+        "Content-Type": "application/json", "x-api-key": api_key, "anthropic-version": "2023-06-01",
+    })
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return json.loads(r.read())["content"][0]["text"]
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -500,9 +523,12 @@ def get_forecast():
                     if cache_available():
                         cache_set(_spot_cache_key(key, target_date, target_hour), result, ttl_seconds=86400)
 
-        # Return in original request order
-        ordered  = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
-        combined = "\n\n---\n\n".join(ordered)
+        # Rank all spots best-to-worst (single cheap Claude call to sort the cards)
+        ordered = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
+        try:
+            combined = rank_spots(ordered, target_date, target_hour)
+        except Exception:
+            combined = "\n\n---\n\n".join(ordered)  # fallback: unranked
         return _cors(jsonify({"result": combined, "cached": len(spots_to_fetch) == 0}))
     except Exception as e:
         return _cors(jsonify({"error": str(e)})), 500
