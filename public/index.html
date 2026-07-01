@@ -685,22 +685,34 @@ function formatResult(text) {
     });
   }
   return cards.map((card, i) => {
-    // Strip markdown headings and blank lines, normalize
-    const lines = card.split('\n')
-      .map(l => l.trim())
-      .filter(l => l && !l.startsWith('#'));  // drop ## heading lines
+    const allLines = card.split('\n').map(l => l.trim()).filter(Boolean);
 
-    // Find the line with **Name** ★ X.X — it's our title line
-    let titleIdx = lines.findIndex(l => /\*\*.*?\*\*/.test(l) && /[\d.]+/.test(l));
-    if (titleIdx === -1) titleIdx = 0;
-    const firstLine = lines[titleIdx] || '';
+    // Find the structured title line: **Name** ★ X.X
+    let titleIdx = allLines.findIndex(l => /\*\*.*?\*\*/.test(l) && /[\d.]+/.test(l));
+    let spotName = '', starsStr = '';
 
-    const nameMatch = firstLine.match(/^\*\*(.*?)\*\*/);
-    const spotName  = nameMatch ? nameMatch[1] : firstLine.replace(/★|☆|\d+(?:\.\d+)?/g, '').replace(/\*/g, '').trim();
-    const starsStr  = firstLine.replace(/\*\*.*?\*\*/, '').trim();
+    if (titleIdx !== -1) {
+      const firstLine = allLines[titleIdx];
+      const nameMatch = firstLine.match(/^\*\*(.*?)\*\*/);
+      spotName = nameMatch ? nameMatch[1] : firstLine.replace(/★|☆|\d+(?:\.\d+)?/g, '').replace(/\*/g, '').trim();
+      starsStr = firstLine.replace(/\*\*.*?\*\*/, '').trim();
+    } else {
+      // Fallback: extract name from ## heading, strip date suffix
+      const headingLine = allLines.find(l => l.startsWith('#'));
+      if (headingLine) {
+        spotName = headingLine.replace(/^#+\s*/, '').replace(/[–-].*$/, '').trim();
+        titleIdx = allLines.indexOf(headingLine);
+      } else {
+        titleIdx = 0;
+        spotName = '';
+      }
+    }
 
-    // Next line after title: conditions if it contains | or ft/mph
-    const afterTitle = lines.slice(titleIdx + 1);
+    // Non-heading lines after title
+    const lines = allLines.filter(l => !l.startsWith('#'));
+
+    // Lines after the title (non-heading lines only)
+    const afterTitle = lines.filter(l => l !== (allLines[titleIdx] || ''));
     const isCondLine = l => l.includes('|') || /\d+(?:\.\d+)?ft/.test(l) || /\d+mph/.test(l);
     const condIdx    = afterTitle.findIndex(isCondLine);
     const conditions = condIdx !== -1 ? afterTitle[condIdx] : '';
