@@ -3,6 +3,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from flask import Flask, request, jsonify
 import json, urllib.request, urllib.parse, zoneinfo, hashlib, math as _math
+import concurrent.futures
 from datetime import datetime, timedelta
 from cache import cache_get, cache_set, cache_available
 
@@ -247,29 +248,19 @@ EAST COAST:
 - Ruggles RI: SE/E swell; handles biggest hurricane surf on EC; experts only
 - East Coast general: needs hurricane swell (summer/fall) or nor'easters (fall/winter) for quality
 
-Always recommend — never say stay home.
+Output format for a SINGLE SPOT — use exactly this structure:
 
-Output format:
-[RIGHT NOW / DAWN PATROL - context]
-Conditions: [1-sentence cross-referenced summary — note if buoy confirms or contradicts model]
+**[Spot Name]** ★★★☆☆ X.X
+[height ft] | [period]s | [dir]deg swell | wind [speed]mph [dir]deg | tide [ft]
+[One to two sentences — cross-reference buoy vs model, note tide and wind impact]
 
-RANKED SPOTS
-1. [Name] [1-5 stars]  [height ft] | [period]s | [dir]deg swell | wind [speed]mph [dir]deg | tide [ft]
-   [One sentence reason]
-2-N. [same format]
-
-SKIP (flat/blown out):
-- [Name]: [reason]
-
-Notes: [tide warnings, crowd notes, buoy vs model gaps. 2-3 sentences]
-
-Star ratings are ABSOLUTE, not relative to the other checked spots. Half-point increments allowed (e.g. 3.5, 4.5):
+Star ratings are ABSOLUTE. Half-point increments allowed (e.g. 3.5, 4.5):
 - 5: Pumping — 4ft+ with 12s+ groundswell, offshore winds, good tide.
 - 4-4.5: Good — 3-4ft, 10s+ period, light wind, tide working.
 - 3-3.5: Decent — 2-3ft, 8-10s, manageable conditions.
 - 2-2.5: Marginal — under 2ft, short period, or onshore wind.
 - 1-1.5: Poor — flat, blown out, or wrong swell direction.
-If all spots are bad, give them all low scores. Do NOT give 5 stars just because it's the best of a bad bunch. Convert m to ft (x3.28)."""
+Be honest — if conditions are bad, rate it low. Convert m to ft (x3.28)."""
 
 
 # ---------------------------------------------------------------------------
@@ -419,22 +410,24 @@ def _format_spot_knowledge(spot_keys):
     return "\n".join(lines)
 
 
-def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names, now_mode=False, spot_keys=None):
+def _spot_cache_key(spot_key, date_str, window):
+    h = hashlib.md5(spot_key.encode()).hexdigest()[:8]
+    return f"swell:spot:{h}:{date_str}:{window}"
+
+
+def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_name, spot_key, now_mode=False):
     api_key = os.environ.get("ANTHROPIC_API_KEY","")
     date_label = f"{target_date.strftime('%A, %B')} {target_date.day}"
     mode_str = "RIGHT NOW (next 3 hours)" if now_mode else f"dawn patrol on {date_label}"
-    extra_blocks = ""
-    if spot_keys:
-        knowledge = _format_spot_knowledge(spot_keys)
-        if knowledge:
-            extra_blocks += f"\n\nSPOT LOCAL KNOWLEDGE:\n{knowledge}"
+    knowledge = _format_spot_knowledge([spot_key])
+    knowledge_block = f"\n\nSPOT LOCAL KNOWLEDGE:\n{knowledge}" if knowledge else ""
 
     payload = json.dumps({
-        "model":"claude-sonnet-4-6","max_tokens":1500,
+        "model":"claude-sonnet-4-6","max_tokens":400,
         "system":SYSTEM_PROMPT,
         "messages":[{"role":"user","content":(
-            f"Rank ONLY these spots for {mode_str}: {spot_names}. Do not include any other spots."
-            f"{extra_blocks}\n\n"
+            f"Assess {spot_name} for {mode_str}."
+            f"{knowledge_block}\n\n"
             f"SOURCE 1 - Open-Meteo forecast:\n{openmeteo_block}\n\n"
             f"SOURCE 2 - NOAA Buoy readings:\n{buoy_block}\n\n"
             f"SOURCE 3 - NOAA Tides:\n{tide_block}"
@@ -445,6 +438,18 @@ def call_claude(openmeteo_block, buoy_block, tide_block, target_date, spot_names
     })
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.loads(r.read())["content"][0]["text"]
+
+
+def _forecast_one_spot(spot, target, now_mode, buoy_block, tide_block):
+    """Fetch Open-Meteo and call Claude for a single spot. Returns (key, result)."""
+    key = spot.get("key", "")
+    name = spot.get("name") or key
+    try:
+        om_block = fetch_openmeteo(spot, target, now=now_mode)
+        result = call_claude(om_block, buoy_block, tide_block, target, name, key, now_mode)
+        return key, result
+    except Exception as e:
+        return key, f"**{name}** — error: {e}"
 
 
 # ---------------------------------------------------------------------------
@@ -468,42 +473,46 @@ def get_forecast():
         spots = [s for s in spots_in if "lat" in s and "lng" in s]
         if not spots: return _cors(jsonify({"error":"No valid spots with coordinates"})), 400
 
-        # Cache check
-        spot_keys_sorted = sorted(s.get("key","") for s in spots)
-        cache_hash = hashlib.md5(",".join(spot_keys_sorted).encode()).hexdigest()[:8]
-        window = "now" if now_mode else "dawn"
+        window   = "now" if now_mode else "dawn"
         date_str = target.strftime("%Y-%m-%d")
-        cache_key = f"swell:user:{cache_hash}:{date_str}:{window}"
+        ttl      = 3600 if now_mode else 86400
 
-        if cache_available():
-            cached = cache_get(cache_key)
-            if cached:
-                return _cors(jsonify({"result": cached, "cached": True}))
-
-        # Live fetch
-        openmeteo_parts = []
+        # Per-spot cache check
+        spot_results  = {}
+        spots_to_fetch = []
         for spot in spots:
-            try: openmeteo_parts.append(fetch_openmeteo(spot, target, now=now_mode))
-            except Exception as e: openmeteo_parts.append(f"{spot.get('key','?')}: error - {e}")
+            key = spot.get("key", "")
+            ck  = _spot_cache_key(key, date_str, window)
+            cached = cache_get(ck) if cache_available() else None
+            if cached:
+                spot_results[key] = cached
+            else:
+                spots_to_fetch.append(spot)
 
-        try: buoy_block = fetch_buoys(spots)
-        except Exception as e: buoy_block = f"Buoy data unavailable: {e}"
+        if spots_to_fetch:
+            try: buoy_block = fetch_buoys(spots_to_fetch)
+            except Exception as e: buoy_block = f"Buoy data unavailable: {e}"
+            tide_station = pick_tide_station(spots_to_fetch)
+            try: tide_block = fetch_tides(target, tide_station)
+            except Exception as e: tide_block = f"Tide data unavailable: {e}"
 
-        tide_station = pick_tide_station(spots)
-        try: tide_block = fetch_tides(target, tide_station)
-        except Exception as e: tide_block = f"Tide data unavailable: {e}"
+            # Parallel Claude calls for uncached spots
+            with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
+                futs = {
+                    ex.submit(_forecast_one_spot, spot, target, now_mode, buoy_block, tide_block): spot
+                    for spot in spots_to_fetch
+                }
+                for fut in concurrent.futures.as_completed(futs):
+                    key, result = fut.result()
+                    spot_results[key] = result
+                    if cache_available():
+                        cache_set(_spot_cache_key(key, date_str, window), result, ttl_seconds=ttl)
 
-        spot_names = ", ".join(s.get("key","?") for s in spots)
-        result = call_claude(
-            "\n\n".join(openmeteo_parts), buoy_block, tide_block,
-            target, spot_names, now_mode,
-            spot_keys=spot_keys_sorted,
-        )
-
-        if cache_available():
-            cache_set(cache_key, result, ttl_seconds=5400)
-
-        return _cors(jsonify({"result": result, "cached": False}))
+        # Return in original request order
+        ordered = [spot_results[s["key"]] for s in spots if s.get("key") in spot_results]
+        combined = "\n\n---\n\n".join(ordered)
+        all_cached = len(spots_to_fetch) == 0
+        return _cors(jsonify({"result": combined, "cached": all_cached}))
     except Exception as e:
         return _cors(jsonify({"error": str(e)})), 500
 
@@ -521,54 +530,74 @@ def run_cron():
         return _cors(jsonify({"error": "Redis not configured"})), 500
 
     now_pt = datetime.now(zoneinfo.ZoneInfo("America/Los_Angeles"))
-    targets = [
-        (now_pt + timedelta(days=1), "dawn"),
-        (now_pt, "now"),
-    ]
+    # Only pre-cache dawn patrol (tomorrow); "now" changes every hour so not worth pre-caching
+    target_date = now_pt + timedelta(days=1)
+    window      = "dawn"
+    date_str    = target_date.strftime("%Y-%m-%d")
 
+    # Pre-fetch buoy data once per coast
     west_spot = [{"lat": 32.7528, "lng": -117.2553}]
-    east_spot  = [{"lat": 35.5925, "lng": -75.4658}]
+    east_spot = [{"lat": 35.5925, "lng": -75.4658}]
     try: west_buoys = fetch_buoys(west_spot)
     except Exception as e: west_buoys = f"Buoys unavailable: {e}"
     try: east_buoys = fetch_buoys(east_spot)
     except Exception as e: east_buoys = f"Buoys unavailable: {e}"
 
-    results = {"cached": [], "failed": []}
+    # Pre-fetch tide data per station (cached locally in dict to avoid repeat calls)
+    tide_cache_local = {}
+    def get_tide(spot_list):
+        sid = pick_tide_station(spot_list)
+        if sid not in tide_cache_local:
+            try: tide_cache_local[sid] = fetch_tides(target_date, sid)
+            except Exception as e: tide_cache_local[sid] = f"Tides unavailable: {e}"
+        return tide_cache_local[sid]
 
-    for target_date, window in targets:
-        tide_blocks = {}
-        for key, sid in [("west","9410230"),("east","8638610")]:
-            try: tide_blocks[key] = fetch_tides(target_date, sid)
-            except Exception as e: tide_blocks[key] = f"Tides unavailable: {e}"
+    # Build full spot list from knowledge base (has lat/lng for every spot)
+    all_spots = [
+        {"key": k, "name": v.get("name", k), "lat": v["lat"], "lng": v["lng"]}
+        for k, v in SPOT_KNOWLEDGE.items()
+        if "lat" in v and "lng" in v
+    ]
 
-        for region_key, region_info in CRON_REGIONS.items():
-            date_str = target_date.strftime("%Y-%m-%d")
-            cache_key = f"swell:region:{region_key}:{date_str}:{window}"
-            is_east = region_info["lng"] > -81
-            tz_name = "America/New_York" if is_east else "America/Los_Angeles"
-            # Skip if it's dark at this region right now — no point caching
-            if not _is_daylight(region_info["lat"], region_info["lng"], tz_name):
-                results["cached"].append(f"{cache_key}:skipped-nighttime")
-                continue
-            spot = {"key": region_key, "lat": region_info["lat"],
-                    "lng": region_info["lng"], "name": region_info["name"]}
-            try:
-                om_block   = fetch_openmeteo(spot, target_date, now=(window=="now"))
-                buoy_block = east_buoys if is_east else west_buoys
-                tide_block = tide_blocks["east"] if is_east else tide_blocks["west"]
-                result = call_claude(om_block, buoy_block, tide_block,
-                                     target_date, region_info["name"],
-                                     now_mode=(window=="now"))
-                cache_set(cache_key, result, ttl_seconds=7200)
-                results["cached"].append(cache_key)
-            except Exception as e:
-                results["failed"].append({"key": cache_key, "error": str(e)})
+    # Process up to 25 uncached spots per cron invocation to stay within timeout
+    MAX_PER_RUN = 25
+    results = {"cached": [], "skipped": [], "failed": []}
+
+    for spot in all_spots:
+        if len(results["cached"]) >= MAX_PER_RUN:
+            break
+
+        ck = _spot_cache_key(spot["key"], date_str, window)
+
+        # Skip if already cached
+        if cache_get(ck):
+            results["skipped"].append(spot["key"])
+            continue
+
+        is_east = spot["lng"] > -81
+        tz_name = "America/New_York" if is_east else "America/Los_Angeles"
+        if not _is_daylight(spot["lat"], spot["lng"], tz_name):
+            results["skipped"].append(f"{spot['key']}:nighttime")
+            continue
+
+        buoy_block = east_buoys if is_east else west_buoys
+        tide_block = get_tide([spot])
+
+        try:
+            om_block = fetch_openmeteo(spot, target_date, now=False)
+            result   = call_claude(om_block, buoy_block, tide_block,
+                                   target_date, spot["name"], spot["key"], now_mode=False)
+            cache_set(ck, result, ttl_seconds=86400)
+            results["cached"].append(spot["key"])
+        except Exception as e:
+            results["failed"].append({"key": spot["key"], "error": str(e)})
 
     return _cors(jsonify({
         "status": "ok",
         "cached": len(results["cached"]),
-        "failed": len(results["failed"]),
-        "details": results
+        "skipped": len(results["skipped"]),
+        "failed":  len(results["failed"]),
+        "details": results,
     }))
 
 
